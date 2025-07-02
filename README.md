@@ -1,5 +1,7 @@
 # AI Chatbot Platform
 
+[➡️ Project Purpose & Route Descriptions](docs/projectPurpose.md)
+
 A multi-tenant platform to create, deploy, and manage AI-powered chatbots for your business. Easily upload data, build custom chatbots, integrate them into your website or app, and monitor performance with advanced analytics.
 
 ## Features
