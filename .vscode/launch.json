@@ -1,0 +1,32 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+      {
+        "name": "Next.js: Debug server",
+        "type": "node",
+        "request": "launch",
+        "runtimeExecutable": "node",
+        "runtimeArgs": ["--inspect-brk", "./node_modules/next/dist/bin/next", "dev"],
+        "console": "integratedTerminal",
+        "skipFiles": ["<node_internals>/**"]
+      },
+      {
+        "name": "Next.js: Debug client (Chrome)",
+        "type": "chrome",
+        "request": "launch",
+        "url": "http://localhost:3000",
+        "webRoot": "${workspaceFolder}",
+        "sourceMaps": true,
+        "pathMapping": {
+          "/": "${workspaceFolder}"
+        }
+      }
+    ],
+    "compounds": [
+      {
+        "name": "Debug Fullstack (Server + Client)",
+        "configurations": ["Next.js: Debug server", "Next.js: Debug client (Chrome)"]
+      }
+    ]
+  }
+  
