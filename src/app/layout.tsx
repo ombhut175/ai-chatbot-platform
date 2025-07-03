@@ -5,6 +5,7 @@ import "./globals.css"
 import { ThemeProvider } from "@/lib/theme-provider"
 import { Toaster } from "@/components/ui/toaster"
 import { StagewiseWrapper } from "@/components/stagewise-wrapper"
+import { AuthProvider } from "@/components/auth-provider"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -23,7 +24,9 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className={inter.className}>
         <ThemeProvider>
-          {children}
+          <AuthProvider>
+            {children}
+          </AuthProvider>
           <Toaster />
           <StagewiseWrapper />
         </ThemeProvider>

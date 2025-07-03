@@ -14,14 +14,14 @@ import { useToast } from "@/hooks/use-toast"
 import { useAuthStore } from "@/lib/store"
 
 export default function ProfilePage() {
-  const { user } = useAuthStore()
+  const { userProfile } = useAuthStore()
   const { toast } = useToast()
 
   const [profileData, setProfileData] = useState({
-    name: user?.name || "",
-    email: user?.email || "",
+    name: userProfile?.name || "",
+    email: userProfile?.email || "",
     phone: "+1 (555) 123-4567",
-    company: user?.company.name || "",
+    company: userProfile?.company?.name || "",
     role: "Administrator",
     timezone: "UTC-8 (Pacific Time)",
   })
@@ -64,9 +64,9 @@ export default function ProfilePage() {
           <div className="text-center space-y-6">
             <div className="relative">
               <Avatar className="h-24 w-24 mx-auto ring-4 ring-primary/20 transition-all duration-300 hover:ring-primary/40">
-                <AvatarImage src={user?.company.logo || "/placeholder.svg"} alt={user?.name} />
+                <AvatarImage src="/placeholder.svg" alt={userProfile?.name || "User"} />
                 <AvatarFallback className="text-2xl bg-gradient-to-br from-primary/20 to-secondary/20">
-                  {user?.name?.charAt(0) || "U"}
+                  {userProfile?.name?.charAt(0) || userProfile?.email?.charAt(0).toUpperCase() || "U"}
                 </AvatarFallback>
               </Avatar>
               <div className="absolute -bottom-2 -right-2 p-2 bg-primary rounded-full text-primary-foreground">
@@ -75,10 +75,10 @@ export default function ProfilePage() {
             </div>
 
             <div className="space-y-2">
-              <h3 className="text-xl font-semibold">{user?.name || "User Name"}</h3>
-              <p className="text-muted-foreground">{user?.email || "user@example.com"}</p>
+              <h3 className="text-xl font-semibold">{userProfile?.name || "User Name"}</h3>
+              <p className="text-muted-foreground">{userProfile?.email || "user@example.com"}</p>
               <Badge className="bg-primary/10 text-primary hover:bg-primary/20">
-                {user?.company.plan || "Free Plan"}
+                Free Plan
               </Badge>
             </div>
 

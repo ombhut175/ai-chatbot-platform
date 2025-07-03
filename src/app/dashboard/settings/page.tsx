@@ -14,17 +14,17 @@ import { useToast } from "@/hooks/use-toast"
 import { useAuthStore } from "@/lib/store"
 
 export default function SettingsPage() {
-  const { user } = useAuthStore()
+  const { userProfile } = useAuthStore()
   const { toast } = useToast()
 
   const [companySettings, setCompanySettings] = useState({
-    name: user?.company.name || "",
-    logo: user?.company.logo || "",
+    name: userProfile?.company?.name || "",
+    logo: userProfile?.company?.logo || "",
   })
 
   const [accountSettings, setAccountSettings] = useState({
-    name: user?.name || "",
-    email: user?.email || "",
+    name: userProfile?.name || "",
+    email: userProfile?.email || "",
     currentPassword: "",
     newPassword: "",
     confirmPassword: "",

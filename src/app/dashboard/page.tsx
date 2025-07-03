@@ -109,7 +109,7 @@ const recentActivity = [
 ]
 
 export default function DashboardPage() {
-  const { user } = useAuthStore()
+  const { userProfile } = useAuthStore()
   const { setChatbots, setDataSources } = useAppStore()
 
   useEffect(() => {
@@ -123,7 +123,7 @@ export default function DashboardPage() {
       <div className="flex items-center justify-between space-y-2">
         <div className="space-y-2">
           <h2 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
-            Welcome back, {user?.name?.split(" ")[0] || "User"}! 👋
+            Welcome back, {userProfile?.name?.split(" ")[0] || "User"}! 👋
           </h2>
           <p className="text-lg text-muted-foreground">Here's what's happening with your AI chatbots today.</p>
         </div>

@@ -3,7 +3,7 @@
 import type * as React from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Bot, Database, Home, Plug, Settings, User, ChevronUp, Sparkles } from "lucide-react"
+import { Bot, Database, Home, Plug, Settings, User, ChevronUp, Sparkles, Users } from "lucide-react"
 import { AppRoute } from "@/helpers/string_const/routes"
 
 import {
@@ -24,39 +24,44 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { ThemeToggle } from "@/components/ui/theme-toggle"
 import { useAuthStore } from "@/lib/store"
 
-const data = {
-  navMain: [
-    {
-      title: "Dashboard",
-      url: AppRoute.DASHBOARD,
-      icon: Home,
-    },
-    {
-      title: "Data Sources",
-      url: AppRoute.DASHBOARD_DATA,
-      icon: Database,
-    },
-    {
-      title: "Chatbots",
-      url: AppRoute.DASHBOARD_CHATBOTS,
-      icon: Bot,
-    },
-    {
-      title: "Integrations",
-      url: AppRoute.DASHBOARD_INTEGRATIONS,
-      icon: Plug,
-    },
-    {
-      title: "Settings",
-      url: AppRoute.DASHBOARD_SETTINGS,
-      icon: Settings,
-    },
-  ],
-}
+const getNavItems = (isOwner: boolean) => [
+  {
+    title: "Dashboard",
+    url: AppRoute.DASHBOARD,
+    icon: Home,
+  },
+  {
+    title: "Data Sources",
+    url: AppRoute.DASHBOARD_DATA,
+    icon: Database,
+  },
+  {
+    title: "Chatbots",
+    url: AppRoute.DASHBOARD_CHATBOTS,
+    icon: Bot,
+  },
+  {
+    title: "Integrations",
+    url: AppRoute.DASHBOARD_INTEGRATIONS,
+    icon: Plug,
+  },
+  ...(isOwner ? [{
+    title: "Users",
+    url: AppRoute.DASHBOARD_USERS,
+    icon: Users,
+  }] : []),
+  {
+    title: "Settings",
+    url: AppRoute.DASHBOARD_SETTINGS,
+    icon: Settings,
+  },
+]
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname()
-  const { user, logout } = useAuthStore()
+  const { userProfile, logout, isOwner } = useAuthStore()
+  
+  const navItems = getNavItems(isOwner())
 
   return (
     <Sidebar collapsible="icon" className="border-r border-border/50 bg-card/50 backdrop-blur-xl" {...props}>
@@ -70,9 +75,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 </div>
                 <div className="grid flex-1 text-left text-sm leading-tight">
                   <span className="truncate font-semibold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
-                    {user?.company.name || "Your Company"}
+                    {userProfile?.company?.name || "Your Company"}
                   </span>
-                  <span className="truncate text-xs text-muted-foreground">{user?.company.plan || "Free Plan"}</span>
+                  <span className="truncate text-xs text-muted-foreground">Free Plan</span>
                 </div>
               </Link>
             </SidebarMenuButton>
@@ -84,7 +89,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <SidebarGroupLabel className="text-xs font-medium text-muted-foreground/70">Platform</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {data.navMain.map((item) => (
+              {navItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton
                     asChild
@@ -119,14 +124,14 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground group transition-all duration-300 hover:bg-primary/10"
                 >
                   <Avatar className="h-8 w-8 rounded-lg transition-all duration-300 group-hover:scale-110">
-                    <AvatarImage src={user?.company.logo || "/placeholder.svg"} alt={user?.name} />
+                    <AvatarImage src="/placeholder.svg" alt={userProfile?.name || "User"} />
                     <AvatarFallback className="rounded-lg bg-gradient-to-br from-primary/20 to-secondary/20">
-                      {user?.name?.charAt(0) || "U"}
+                      {userProfile?.name?.charAt(0) || userProfile?.email?.charAt(0).toUpperCase() || "U"}
                     </AvatarFallback>
                   </Avatar>
                   <div className="grid flex-1 text-left text-sm leading-tight">
-                    <span className="truncate font-semibold">{user?.name || "User"}</span>
-                    <span className="truncate text-xs text-muted-foreground">{user?.email || "user@example.com"}</span>
+                    <span className="truncate font-semibold">{userProfile?.name || "User"}</span>
+                    <span className="truncate text-xs text-muted-foreground">{userProfile?.email || "user@example.com"}</span>
                   </div>
                   <ChevronUp className="ml-auto size-4 transition-transform duration-300 group-hover:scale-110" />
                 </SidebarMenuButton>

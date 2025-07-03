@@ -63,16 +63,7 @@ export function useAuth() {
     setAuthState(prev => ({ ...prev, loading: true }))
     
     try {
-      // Call our logout API endpoint
-      const response = await fetch('/api/auth/logout', {
-        method: 'POST',
-      })
-      
-      if (!response.ok) {
-        throw new Error('Failed to logout')
-      }
-      
-      // Also sign out from Supabase client
+      // Sign out from Supabase client only
       const { error } = await supabase.auth.signOut()
       
       if (error) {

@@ -11,7 +11,8 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { AnimatedCard } from "@/components/ui/animated-card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { useAuth } from "@/lib/hooks/use-auth"
-
+import { AppRoute } from "@/helpers/string_const/routes"
+  
 export default function SignupForm() {
   const [formData, setFormData] = useState({
     name: "",
@@ -65,37 +66,8 @@ export default function SignupForm() {
     const result = await signUpWithEmail(formData.email, formData.password, metadata)
     
     if (result.success) {
-      // If user chose to create a company, call the API
-      if (isCreatingCompany && formData.companyName.trim()) {
-        try {
-          const response = await fetch('/api/companies/create-with-owner', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              companyName: formData.companyName.trim(),
-            }),
-          })
-
-          if (!response.ok) {
-            const errorData = await response.json()
-            setFormError(errorData.error || 'Failed to create company')
-            return
-          }
-
-          const companyData = await response.json()
-          console.log('Company created:', companyData)
-        } catch (error) {
-          console.error('Error creating company:', error)
-          setFormError('Failed to create company. Please try again.')
-          return
-        }
-      }
-      
-      // For email confirmation flow, we might want to show a message
-      // For now, redirect to dashboard
-      router.push("/dashboard")
+      // Company creation is now handled by a database trigger, so we can redirect directly.
+      router.push(AppRoute.DASHBOARD)
     }
     // Error handling is done by the useAuth hook
   }

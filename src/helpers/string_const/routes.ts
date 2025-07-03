@@ -8,11 +8,9 @@ export enum AppRoute {
   DASHBOARD_CHATBOTS = '/dashboard/chatbots',
   DASHBOARD_DATA = '/dashboard/data',
   DASHBOARD_INTEGRATIONS = '/dashboard/integrations',
+  DASHBOARD_USERS = '/dashboard/users',
   DASHBOARD_PROFILE = '/dashboard/profile',
   DASHBOARD_SETTINGS = '/dashboard/settings',
   CHAT_PUBLIC = '/chat/public',
   CHAT_INTERNAL = '/chat/internal',
-  API_COMPANY_CREATE_WITH_OWNER = '/api/companies/create-with-owner',
-  API_USERS_ME = '/api/users/me',
-  API_AUTH_LOGOUT = '/api/auth/logout',
 } 
