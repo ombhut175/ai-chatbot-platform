@@ -3,6 +3,7 @@
 import { useEffect } from "react"
 import { Plus, Upload, MessageSquare, Database, Bot, TrendingUp, Zap, Users, Clock } from "lucide-react"
 import Link from "next/link"
+import { AppRoute } from "@/helpers/string_const/routes"
 
 import { GradientButton } from "@/components/ui/gradient-button"
 import { AnimatedCard } from "@/components/ui/animated-card"
@@ -47,28 +48,28 @@ const quickActions = [
     description: "Add new knowledge to your chatbots",
     icon: Upload,
     color: "from-blue-500 to-blue-600",
-    href: "/dashboard/data",
+    href: AppRoute.DASHBOARD_DATA,
   },
   {
     title: "Create New Chatbot",
     description: "Build your next AI assistant",
     icon: Bot,
     color: "from-purple-500 to-purple-600",
-    href: "/dashboard/chatbots",
+    href: AppRoute.DASHBOARD_CHATBOTS,
   },
   {
     title: "Test Chat Interface",
     description: "Try out your chatbots",
     icon: MessageSquare,
     color: "from-green-500 to-green-600",
-    href: "/chat/public",
+    href: AppRoute.CHAT_PUBLIC,
   },
   {
     title: "View Analytics",
     description: "Monitor performance metrics",
     icon: TrendingUp,
     color: "from-orange-500 to-orange-600",
-    href: "/dashboard/analytics",
+    href: AppRoute.DASHBOARD_ANALYTICS,
   },
 ]
 

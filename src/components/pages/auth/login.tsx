@@ -11,6 +11,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { AnimatedCard } from "@/components/ui/animated-card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { useAuth } from "@/lib/hooks/use-auth"
+import { AppRoute } from "@/helpers/string_const/routes"
 
 export default function LoginForm() {
   const [email, setEmail] = useState("")
@@ -22,7 +23,7 @@ export default function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const urlError = searchParams.get('error')
-  const redirectTo = searchParams.get('redirect') || '/dashboard'
+  const redirectTo = searchParams.get('redirect') || AppRoute.DASHBOARD
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -116,7 +117,7 @@ export default function LoginForm() {
             <p className="text-sm text-muted-foreground">
               Don't have an account?{" "}
               <Link
-                href="/signup"
+                href={AppRoute.SIGNUP}
                 className="text-primary hover:text-primary/80 font-medium transition-colors duration-200 hover:underline"
               >
                 Sign up

@@ -4,6 +4,7 @@ import type * as React from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { Bot, Database, Home, Plug, Settings, User, ChevronUp, Sparkles } from "lucide-react"
+import { AppRoute } from "@/helpers/string_const/routes"
 
 import {
   Sidebar,
@@ -27,27 +28,27 @@ const data = {
   navMain: [
     {
       title: "Dashboard",
-      url: "/dashboard",
+      url: AppRoute.DASHBOARD,
       icon: Home,
     },
     {
       title: "Data Sources",
-      url: "/dashboard/data",
+      url: AppRoute.DASHBOARD_DATA,
       icon: Database,
     },
     {
       title: "Chatbots",
-      url: "/dashboard/chatbots",
+      url: AppRoute.DASHBOARD_CHATBOTS,
       icon: Bot,
     },
     {
       title: "Integrations",
-      url: "/dashboard/integrations",
+      url: AppRoute.DASHBOARD_INTEGRATIONS,
       icon: Plug,
     },
     {
       title: "Settings",
-      url: "/dashboard/settings",
+      url: AppRoute.DASHBOARD_SETTINGS,
       icon: Settings,
     },
   ],

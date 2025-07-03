@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { AppRoute } from '@/helpers/string_const/routes'
 
 export async function login(formData: FormData) {
   const supabase = createClient()
@@ -17,11 +18,11 @@ export async function login(formData: FormData) {
   const { error } = await supabase.auth.signInWithPassword(data)
 
   if (error) {
-    redirect('/login?error=Invalid credentials')
+    redirect(AppRoute.LOGIN + '?error=Invalid credentials')
   }
 
-  revalidatePath('/', 'layout')
-  redirect('/dashboard')
+  revalidatePath(AppRoute.HOME, 'layout')
+  redirect(AppRoute.DASHBOARD)
 }
 
 export async function signup(formData: FormData) {
@@ -43,9 +44,9 @@ export async function signup(formData: FormData) {
   const { error } = await supabase.auth.signUp(data)
 
   if (error) {
-    redirect('/signup?error=Could not authenticate user')
+    redirect(AppRoute.SIGNUP + '?error=Could not authenticate user')
   }
 
-  revalidatePath('/', 'layout')
-  redirect('/dashboard')
+  revalidatePath(AppRoute.HOME, 'layout')
+  redirect(AppRoute.DASHBOARD)
 } 

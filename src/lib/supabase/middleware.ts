@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { AppRoute } from '@/helpers/string_const/routes'
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
@@ -36,8 +37,8 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser()
 
   // Protected routes that require authentication
-  const protectedRoutes = ['/dashboard']
-  const internalChatRoutes = ['/chat/internal']
+  const protectedRoutes = [AppRoute.DASHBOARD]
+  const internalChatRoutes = [AppRoute.CHAT_INTERNAL]
   
   // Check if the current path requires authentication
   const isProtectedRoute = protectedRoutes.some(route => 
@@ -51,7 +52,7 @@ export async function updateSession(request: NextRequest) {
   // Only redirect to login if user is trying to access protected routes without authentication
   if (!user && (isProtectedRoute || isInternalChatRoute)) {
     const url = request.nextUrl.clone()
-    url.pathname = '/login'
+    url.pathname = AppRoute.LOGIN
     url.searchParams.set('redirect', request.nextUrl.pathname)
     return NextResponse.redirect(url)
   }
