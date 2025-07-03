@@ -2,14 +2,29 @@ export interface User {
   id: string
   email: string
   name: string
-  company: Company
+  role: "owner" | "admin" | "employee" | "visitor"
+  company?: Company
+  created_at?: string
+  email_confirmed_at?: string
+  last_sign_in_at?: string
+}
+
+export interface Invitation {
+  id: string
+  email: string
+  companyId: string
+  invitedBy: string
+  role: "admin" | "employee"
+  status: "pending" | "accepted" | "expired"
+  token: string
+  expiresAt: string
+  createdAt: string
 }
 
 export interface Company {
   id: string
   name: string
   logo?: string
-  plan: "free" | "pro" | "enterprise"
   createdAt: string
 }
 
@@ -27,6 +42,7 @@ export interface Chatbot {
   id: string
   name: string
   description: string
+  type: "public" | "internal"
   welcomeMessage: string
   personality: "professional" | "friendly" | "casual" | "technical"
   theme: {

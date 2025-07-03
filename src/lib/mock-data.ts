@@ -4,7 +4,6 @@ export const mockCompany: Company = {
   id: "1",
   name: "Acme Corporation",
   logo: "/placeholder.svg?height=40&width=40",
-  plan: "pro",
   createdAt: "2024-01-15T10:00:00Z",
 }
 
@@ -12,6 +11,7 @@ export const mockUser: User = {
   id: "1",
   email: "john@acme.com",
   name: "John Smith",
+  role: "owner",
   company: mockCompany,
 }
 
@@ -50,6 +50,7 @@ export const mockChatbots: Chatbot[] = [
     id: "1",
     name: "Customer Support Bot",
     description: "Handles customer inquiries and support requests",
+    type: "public",
     welcomeMessage: "Hello! How can I help you today?",
     personality: "professional",
     theme: {
@@ -66,6 +67,7 @@ export const mockChatbots: Chatbot[] = [
     id: "2",
     name: "HR Assistant",
     description: "Helps employees with HR-related questions",
+    type: "internal",
     welcomeMessage: "Hi there! I'm here to help with HR questions.",
     personality: "friendly",
     theme: {

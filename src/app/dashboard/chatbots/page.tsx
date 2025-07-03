@@ -31,6 +31,7 @@ export default function ChatbotsPage() {
   const [newChatbot, setNewChatbot] = useState({
     name: "",
     description: "",
+    type: "public" as "public" | "internal",
     welcomeMessage: "Hello! How can I help you today?",
     personality: "professional" as const,
     selectedDataSources: [] as string[],
@@ -41,6 +42,7 @@ export default function ChatbotsPage() {
       id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
       name: newChatbot.name,
       description: newChatbot.description,
+      type: newChatbot.type,
       welcomeMessage: newChatbot.welcomeMessage,
       personality: newChatbot.personality,
       theme: {
@@ -59,6 +61,7 @@ export default function ChatbotsPage() {
     setNewChatbot({
       name: "",
       description: "",
+      type: "public",
       welcomeMessage: "Hello! How can I help you today?",
       personality: "professional",
       selectedDataSources: [],
@@ -130,6 +133,33 @@ export default function ChatbotsPage() {
                   className="col-span-3"
                   placeholder="Handles customer inquiries and support requests"
                 />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="type" className="text-right">
+                  Chatbot Type
+                </Label>
+                <Select
+                  value={newChatbot.type}
+                  onValueChange={(value: "public" | "internal") => setNewChatbot((prev) => ({ ...prev, type: value }))}
+                >
+                  <SelectTrigger className="col-span-3">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="public">
+                      <div className="flex items-center space-x-2">
+                        <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                        <span>Public - Website embedding, open access</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="internal">
+                      <div className="flex items-center space-x-2">
+                        <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                        <span>Internal - Staff only, authentication required</span>
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="welcome" className="text-right">
@@ -230,12 +260,23 @@ export default function ChatbotsPage() {
                     </div>
                     <div>
                       <h3 className="font-semibold text-lg">{chatbot.name}</h3>
-                      <Badge
-                        variant={chatbot.isActive ? "default" : "secondary"}
-                        className="transition-all duration-300 hover:scale-105"
-                      >
-                        {chatbot.isActive ? "Active" : "Inactive"}
-                      </Badge>
+                      <div className="flex items-center gap-2">
+                        <Badge
+                          variant={chatbot.isActive ? "default" : "secondary"}
+                          className="transition-all duration-300 hover:scale-105"
+                        >
+                          {chatbot.isActive ? "Active" : "Inactive"}
+                        </Badge>
+                        <Badge
+                          variant={chatbot.type === "public" ? "outline" : "destructive"}
+                          className="transition-all duration-300 hover:scale-105"
+                        >
+                          <div className="flex items-center gap-1">
+                            <div className={`w-2 h-2 rounded-full ${chatbot.type === "public" ? "bg-green-500" : "bg-blue-500"}`}></div>
+                            {chatbot.type === "public" ? "Public" : "Internal"}
+                          </div>
+                        </Badge>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -272,11 +313,12 @@ export default function ChatbotsPage() {
                     >
                       {chatbot.isActive ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
                     </Button>
-                    <Link href={`/chat/public?bot=${chatbot.id}`}>
+                    <Link href={chatbot.type === "public" ? `/chat/public?bot=${chatbot.id}` : `/chat/internal?bot=${chatbot.id}`}>
                       <Button
                         variant="outline"
                         size="sm"
                         className="hover:bg-green-500/10 hover:text-green-600 transition-all duration-300 hover:scale-105 bg-transparent"
+                        title={`Open ${chatbot.type} chat interface`}
                       >
                         <Eye className="h-4 w-4" />
                       </Button>
