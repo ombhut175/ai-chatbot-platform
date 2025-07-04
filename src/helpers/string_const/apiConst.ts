@@ -6,3 +6,5 @@ export * from './chatbot';
 export * from './integration';
 export * from './columns';
 export * from './http';
+export * from './tables';
+export * from './supabase';

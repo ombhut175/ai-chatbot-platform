@@ -35,7 +35,6 @@ const statusColors: Record<DataSource["status"], string> = {
 
 export default function DataSourcesClientPage() {
   const [dataSources, setDataSources] = useState<DataSource[]>([])
-  const [manualText, setManualText] = useState("")
   const [urlInput, setUrlInput] = useState("")
   const [qaQuestion, setQaQuestion] = useState("")
   const [qaAnswer, setQaAnswer] = useState("")
@@ -90,21 +89,6 @@ export default function DataSourcesClientPage() {
     setDataSources((prev) => prev.filter((ds) => ds.id !== id))
   }
 
-  const handleManualTextSubmit = () => {
-    if (!manualText.trim()) return
-    const newDataSource: DataSource = {
-      id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
-      name: `Manual Text - ${new Date().toLocaleDateString()}`,
-      type: "text",
-      size: new Blob([manualText]).size,
-      status: "ready",
-      uploadedAt: new Date().toISOString(),
-      companyId: "1",
-    }
-    setDataSources((prev) => [...prev, newDataSource])
-    setManualText("")
-  }
-
   const handleUrlSubmit = () => {
     if (!urlInput.trim()) return
     const newDataSource: DataSource = {
@@ -150,7 +134,6 @@ export default function DataSourcesClientPage() {
       <Tabs defaultValue="upload" className="space-y-4">
         <TabsList>
           <TabsTrigger value="upload">File Upload</TabsTrigger>
-          <TabsTrigger value="text">Manual Text</TabsTrigger>
           <TabsTrigger value="url">URL Scraping</TabsTrigger>
           <TabsTrigger value="qa">Q&A Pairs</TabsTrigger>
         </TabsList>
@@ -166,30 +149,6 @@ export default function DataSourcesClientPage() {
               <EnhancedUploadZone onFilesSelected={handleFiles} />
             </div>
           </AnimatedCard>
-        </TabsContent>
-        <TabsContent value="text" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Manual Text Input</CardTitle>
-              <CardDescription>Add text content directly to your knowledge base</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="manual-text">Text Content</Label>
-                <Textarea
-                  id="manual-text"
-                  placeholder="Enter your text content here..."
-                  value={manualText}
-                  onChange={(e) => setManualText(e.target.value)}
-                  rows={10}
-                />
-              </div>
-              <Button onClick={handleManualTextSubmit} disabled={!manualText.trim()}>
-                <Type className="mr-2 h-4 w-4" />
-                Add Text Content
-              </Button>
-            </CardContent>
-          </Card>
         </TabsContent>
         <TabsContent value="url" className="space-y-4">
           <Card>
