@@ -41,8 +41,8 @@ export const processUrlFunction = inngest.createFunction(
       const chunks = pineconeService.processTextContent(validatedContent, 1000, 200)
       console.log(`📝 Created ${chunks.length} text chunks from URL content`)
 
-      // Create namespace for this document
-      const namespace = `company_${companyId}_${dataSourceId}`
+      // Create namespace for this document (consistent with file processing)
+      const namespace = `company_${companyId}`
 
       // Upload to Pinecone
       const uploadResult = await pineconeService.uploadDocument(
@@ -166,8 +166,8 @@ export const processQaFunction = inngest.createFunction(
         console.log(`📝 Created ${chunks.length} chunks for long Q&A content`)
       }
 
-      // Create namespace for this document
-      const namespace = `company_${companyId}_${dataSourceId}`
+      // Create namespace for this document (consistent with file processing)
+      const namespace = `company_${companyId}`
 
       // Upload to Pinecone
       const uploadResult = await pineconeService.uploadDocument(

@@ -41,19 +41,19 @@ export interface DataSource {
 export interface Chatbot {
   id: string
   name: string
-  description: string
+  description: string | null
   type: "public" | "internal"
-  welcomeMessage: string
-  personality: "professional" | "friendly" | "casual" | "technical"
-  theme: {
-    primaryColor: string
-    backgroundColor: string
-    textColor: string
-  }
-  dataSources: string[]
-  isActive: boolean
-  createdAt: string
-  companyId: string
+  welcome_message: string | null
+  personality: "professional" | "friendly" | "casual" | "technical" | "formal"
+  theme: any | null
+  is_active: boolean
+  status: "processing" | "ready" | "error"
+  company_id: string
+  pinecone_namespace: string | null
+  created_at: string
+  updated_at: string
+  dataSources?: string[] // Optional field for UI compatibility
+  dataSourceCount?: number // Count of associated data sources
 }
 
 export interface ChatMessage {

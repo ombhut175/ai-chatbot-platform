@@ -294,9 +294,9 @@ export const processFileFunction = inngest.createFunction(
       console.log(`📝 Created ${chunks.length} text chunks`)
 
       // Create namespace for this document
-      const namespace = `company_${companyId}_${dataSourceId}`
+      const namespace = `company_${companyId}`
 
-      // Upload to Pinecone
+      // Upload to Pinecone with dataSourceId as metadata
       const uploadResult = await pineconeService.uploadDocument(
         dataSourceId,
         chunks,
@@ -376,9 +376,273 @@ export const handleProcessingError = inngest.createFunction(
   }
 )
 
+// Add the chatbot training function
+export const trainChatbotFunction = inngest.createFunction(
+  { id: 'train-chatbot' },
+  { event: 'chatbot/train' },
+  async ({ event, step }) => {
+    const { chatbotId, companyId, dataSourceIds, chatbotName } = event.data
+
+    console.log(`🤖 Starting chatbot training for ${chatbotName} (${chatbotId})`)
+    console.log(`📚 Training on ${dataSourceIds.length} data sources`)
+
+    // Step 1: Get chatbot information and validate it exists
+    const chatbotInfo = await step.run('validate-chatbot', async () => {
+      console.log('🔍 Validating chatbot exists...')
+      
+      const supabase = await createClient()
+      const dataSourceService = createDataSourceService(supabase)
+      
+      // Get chatbot details (we'll add this to chatbot service later if needed)
+      const { data: chatbot, error } = await supabase
+        .from('chatbots')
+        .select('*')
+        .eq('id', chatbotId)
+        .eq('company_id', companyId)
+        .single()
+
+      if (error || !chatbot) {
+        throw new Error(`Chatbot not found: ${error?.message}`)
+      }
+
+      console.log(`✅ Chatbot validated: ${chatbot.name}`)
+      return chatbot
+    })
+
+    // Step 2: Get data sources associated with this chatbot
+    const dataSources = await step.run('fetch-chatbot-data-sources', async () => {
+      console.log('📥 Fetching data sources associated with chatbot...')
+      
+      const supabase = await createClient()
+      const dataSourceService = createDataSourceService(supabase)
+      
+      // Get data source IDs from the junction table
+      const { data: associations, error: associationError } = await supabase
+        .from('chatbot_data_sources')
+        .select('data_source_id')
+        .eq('chatbot_id', chatbotId)
+      
+      if (associationError) {
+        console.error('❌ Failed to fetch chatbot data source associations:', associationError)
+        throw new Error(`Failed to fetch data source associations: ${associationError.message}`)
+      }
+      
+      if (!associations || associations.length === 0) {
+        console.warn('⚠️ No data sources associated with this chatbot')
+        return []
+      }
+      
+      const associatedDataSourceIds = associations.map(a => a.data_source_id)
+      console.log(`🔗 Found ${associatedDataSourceIds.length} associated data sources`)
+      
+      const sources = []
+      
+      for (const dataSourceId of associatedDataSourceIds) {
+        const result = await dataSourceService.getDataSourceById(dataSourceId)
+        
+        if (result.success && result.data) {
+          // Ensure the data source belongs to the same company
+          if (result.data.companyId === companyId) {
+            // Only include data sources that are ready
+            if (result.data.status === 'ready') {
+              sources.push(result.data)
+              console.log(`📋 Including data source: ${result.data.name} (${result.data.type}, ${result.data.status})`)
+            } else {
+              console.warn(`⚠️ Skipping data source ${result.data.name} - status is ${result.data.status}, needs to be 'ready'`)
+            }
+          } else {
+            console.warn(`⚠️ Skipping data source ${dataSourceId} - company mismatch`)
+          }
+        } else {
+          console.warn(`⚠️ Failed to fetch data source ${dataSourceId}: ${result.error}`)
+        }
+      }
+      
+      console.log(`✅ Found ${sources.length} valid data sources for training`)
+      return sources
+    })
+
+    // Step 3: Prepare Pinecone namespace for the chatbot
+    const pineconeNamespace = await step.run('setup-pinecone-namespace', async () => {
+      console.log('🔧 Setting up Pinecone namespace for chatbot...')
+      
+      // Use the chatbot's existing namespace or create a new one
+      const namespace = chatbotInfo.pinecone_namespace || `chatbot_${companyId}_${chatbotId}`
+      
+      console.log(`📋 Using Pinecone namespace: ${namespace}`)
+      return namespace
+    })
+
+    // Step 4: Collect all training data from the data sources
+    const trainingData = await step.run('collect-training-data', async () => {
+      console.log('📚 Collecting training data from data sources...')
+      
+      const allChunks = []
+      
+      for (const dataSource of dataSources) {
+        try {
+          console.log(`📖 Processing data source: ${dataSource.name}`)
+          
+          // Get the data source content from Pinecone using company namespace
+          const existingNamespace = `company_${companyId}`
+          
+          // Get all content from the data source using the improved method
+          const searchResult = await pineconeService.getVectorsByDocumentId(
+            existingNamespace,
+            dataSource.id
+          )
+          
+          if (searchResult.success && searchResult.results) {
+            const chunks = searchResult.results.map((match: any) => ({
+              id: `${dataSource.id}_${match.id}`,
+              text: match.metadata?.text || '',
+              metadata: {
+                dataSourceId: dataSource.id,
+                dataSourceName: dataSource.name,
+                originalScore: match.score,
+                ...match.metadata
+              }
+            }))
+            
+            allChunks.push(...chunks)
+            console.log(`✅ Added ${chunks.length} chunks from ${dataSource.name}`)
+            
+            // Debug: Log first chunk text sample
+            if (chunks.length > 0) {
+              console.log(`📝 Sample text from ${dataSource.name}: ${chunks[0].text.substring(0, 100)}...`)
+            }
+          } else {
+            console.warn(`⚠️ No content found for data source ${dataSource.name}`)
+            console.warn(`   Search result: success=${searchResult.success}, error=${searchResult.error}`)
+          }
+        } catch (error) {
+          console.error(`❌ Error processing data source ${dataSource.name}:`, error)
+        }
+      }
+      
+      console.log(`📊 Total training chunks collected: ${allChunks.length}`)
+      
+      // Provide detailed summary
+      if (allChunks.length === 0) {
+        console.error('❌ TRAINING DATA COLLECTION SUMMARY:')
+        console.error(`   - Total data sources found: ${dataSources.length}`)
+        console.error(`   - Ready data sources: ${dataSources.filter(ds => ds.status === 'ready').length}`)
+        console.error(`   - Company namespace: company_${companyId}`)
+        console.error(`   - No training chunks were collected from any data source`)
+        console.error(`   - This indicates that either:`)
+        console.error(`     1. Data sources haven't been processed yet (check their status)`)
+        console.error(`     2. Data was stored in a different namespace`)
+        console.error(`     3. There's an issue with the Pinecone search`)
+      } else {
+        console.log(`✅ TRAINING DATA COLLECTION SUMMARY:`)
+        console.log(`   - Total data sources processed: ${dataSources.length}`)
+        console.log(`   - Total chunks collected: ${allChunks.length}`)
+        console.log(`   - Company namespace: company_${companyId}`)
+      }
+      
+      return allChunks
+    })
+
+    // Step 5: Upload training data to chatbot's Pinecone namespace
+    const uploadResult = await step.run('upload-to-pinecone', async () => {
+      try {
+        console.log('🚀 Uploading training data to Pinecone...')
+        
+        if (trainingData.length === 0) {
+          throw new Error(`No training data available for chatbot. Please ensure that:
+1. Data sources are associated with this chatbot
+2. Associated data sources have been processed successfully (status: 'ready')
+3. Data sources contain valid content that was uploaded to Pinecone`)
+        }
+        
+        // Upload all chunks to the chatbot's namespace
+        const result = await pineconeService.uploadDocument(
+          chatbotId,
+          trainingData,
+          pineconeNamespace
+        )
+        
+        if (!result.success) {
+          throw new Error(`Failed to upload training data: ${result.error}`)
+        }
+        
+        console.log(`✅ Successfully uploaded training data to Pinecone`)
+        return result
+      } catch (error) {
+        // Update chatbot status to error if upload fails
+        await updateChatbotStatusOnError(chatbotId, error)
+        throw error
+      }
+    })
+
+    // Step 6: Update chatbot metadata with training info
+    const finalResult = await step.run('update-chatbot-metadata', async () => {
+      console.log('📝 Updating chatbot with training metadata...')
+      
+      const supabase = await createClient()
+      
+      // Update chatbot with training information
+      const { error } = await supabase
+        .from('chatbots')
+        .update({
+          status: 'ready',
+          pinecone_namespace: pineconeNamespace,
+          // Store training metadata in the theme field for now
+          theme: {
+            ...chatbotInfo.theme,
+            training: {
+              namespace: pineconeNamespace,
+              dataSourceCount: dataSources.length,
+              chunkCount: trainingData.length,
+              trainedAt: new Date().toISOString(),
+              status: 'completed'
+            }
+          }
+        })
+        .eq('id', chatbotId)
+      
+      if (error) {
+        console.error('❌ Failed to update chatbot metadata:', error)
+        // Don't throw error here as the training was successful
+      }
+      
+      console.log('✅ Chatbot training completed successfully')
+      
+      return {
+        chatbotId,
+        namespace: pineconeNamespace,
+        dataSourceCount: dataSources.length,
+        chunkCount: trainingData.length,
+        status: 'completed'
+      }
+    })
+
+    console.log(`🎉 Chatbot ${chatbotName} training completed successfully!`)
+    console.log(`📊 Training summary:`, finalResult)
+    
+    return finalResult
+  }
+)
+
+// Helper function to update chatbot status on error
+async function updateChatbotStatusOnError(chatbotId: string, error: any) {
+  try {
+    const supabase = await createClient()
+    await supabase
+      .from('chatbots')
+      .update({ status: 'error' })
+      .eq('id', chatbotId)
+    
+    console.error(`❌ Updated chatbot ${chatbotId} status to 'error' due to training failure:`, error)
+  } catch (updateError) {
+    console.error(`❌ Failed to update chatbot status to error:`, updateError)
+  }
+}
+
 // Export all functions
 export const functions = [
   processFileFunction,
   handleProcessingError,
+  trainChatbotFunction,
   ...urlQaFunctions
 ] 

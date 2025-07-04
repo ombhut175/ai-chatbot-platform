@@ -1,157 +1,322 @@
 "use client"
 
-import { useState } from "react"
-import { Sparkles, MessageSquare, Zap, Clock, Users, ArrowRight } from "lucide-react"
-import { ChatWidget } from "@/components/chat/chat-widget"
-import { AnimatedCard } from "@/components/ui/animated-card"
-import { GradientButton } from "@/components/ui/gradient-button"
+import { useState, useEffect, useRef } from 'react'
+import { useSearchParams } from 'next/navigation'
+import { Card } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { Loader2, Send, Bot, User } from 'lucide-react'
+import { format } from 'date-fns'
 
-const features = [
-  {
-    icon: Zap,
-    title: "Lightning Fast",
-    description: "Get instant responses powered by advanced AI technology",
-    color: "from-yellow-500 to-orange-500",
-  },
-  {
-    icon: MessageSquare,
-    title: "Natural Conversations",
-    description: "Chat naturally with our AI that understands context",
-    color: "from-blue-500 to-purple-500",
-  },
-  {
-    icon: Clock,
-    title: "24/7 Available",
-    description: "Always here when you need assistance, day or night",
-    color: "from-green-500 to-teal-500",
-  },
-  {
-    icon: Users,
-    title: "Personalized Help",
-    description: "Tailored responses based on your specific needs",
-    color: "from-purple-500 to-pink-500",
-  },
-]
+interface Message {
+  id: string
+  role: 'user' | 'assistant'
+  content: string
+  created_at: string
+}
 
-const sampleQuestions = [
-  "How do I reset my password?",
-  "What are your business hours?",
-  "Can you help me with billing?",
-  "How do I contact support?",
-]
+interface ChatbotDetails {
+  id: string
+  name: string
+  description: string | null
+  welcome_message: string | null
+  theme: {
+    primaryColor: string
+    backgroundColor: string
+    textColor: string
+  } | null
+}
 
 export default function PublicChatPage() {
-  const [selectedQuestion, setSelectedQuestion] = useState<string | null>(null)
+  const searchParams = useSearchParams()
+  const chatbotId = searchParams?.get('chatbotId')
+  
+  const [messages, setMessages] = useState<Message[]>([])
+  const [inputMessage, setInputMessage] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
+  const [sessionId, setSessionId] = useState<string | null>(null)
+  const [chatbot, setChatbot] = useState<ChatbotDetails | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  
+  const messagesEndRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  // Scroll to bottom when messages change
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }
+
+  useEffect(() => {
+    scrollToBottom()
+  }, [messages])
+
+  // Load chatbot details
+  useEffect(() => {
+    const loadChatbot = async () => {
+      if (!chatbotId) {
+        setError('No chatbot ID provided')
+        return
+      }
+
+      try {
+        const response = await fetch(`/api/chatbots/${chatbotId}`)
+        const data = await response.json()
+
+        if (data.success && data.data) {
+          setChatbot(data.data)
+          
+          // Add welcome message if exists
+          if (data.data.welcome_message) {
+            setMessages([{
+              id: 'welcome',
+              role: 'assistant',
+              content: data.data.welcome_message,
+              created_at: new Date().toISOString()
+            }])
+          }
+        } else {
+          setError('Failed to load chatbot')
+        }
+      } catch (err) {
+        console.error('Failed to load chatbot:', err)
+        setError('Failed to load chatbot')
+      }
+    }
+
+    loadChatbot()
+  }, [chatbotId])
+
+  // Load chat history if session exists
+  useEffect(() => {
+    const loadHistory = async () => {
+      const storedSessionId = sessionStorage.getItem(`chat_session_${chatbotId}`)
+      if (storedSessionId && chatbotId) {
+        setSessionId(storedSessionId)
+        
+        try {
+          const response = await fetch(`/api/chat/public?sessionId=${storedSessionId}&chatbotId=${chatbotId}`)
+          const data = await response.json()
+          
+          if (data.success && data.data) {
+            setMessages(data.data)
+          }
+        } catch (err) {
+          console.error('Failed to load chat history:', err)
+        }
+      }
+    }
+
+    if (chatbotId) {
+      loadHistory()
+    }
+  }, [chatbotId])
+
+  const sendMessage = async () => {
+    if (!inputMessage.trim() || !chatbotId || isLoading) return
+
+    const userMessage: Message = {
+      id: Date.now().toString(),
+      role: 'user',
+      content: inputMessage,
+      created_at: new Date().toISOString()
+    }
+
+    setMessages(prev => [...prev, userMessage])
+    setInputMessage('')
+    setIsLoading(true)
+    setError(null)
+
+    try {
+      const response = await fetch('/api/chat/public', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: inputMessage,
+          chatbotId,
+          sessionId
+        })
+      })
+
+      const data = await response.json()
+
+      if (data.success && data.data) {
+        const assistantMessage: Message = {
+          id: Date.now().toString() + '_assistant',
+          role: 'assistant',
+          content: data.data.message,
+          created_at: data.data.timestamp
+        }
+
+        setMessages(prev => [...prev, assistantMessage])
+        
+        // Store session ID
+        if (data.data.sessionId && !sessionId) {
+          setSessionId(data.data.sessionId)
+          sessionStorage.setItem(`chat_session_${chatbotId}`, data.data.sessionId)
+        }
+      } else {
+        setError(data.error || 'Failed to send message')
+      }
+    } catch (err) {
+      console.error('Failed to send message:', err)
+      setError('Failed to send message. Please try again.')
+    } finally {
+      setIsLoading(false)
+      inputRef.current?.focus()
+    }
+  }
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      sendMessage()
+    }
+  }
+
+  if (!chatbotId) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <Card className="max-w-md w-full p-6 text-center">
+          <h2 className="text-xl font-semibold mb-2">No Chatbot Selected</h2>
+          <p className="text-muted-foreground">
+            Please provide a valid chatbot ID in the URL parameters.
+          </p>
+        </Card>
+      </div>
+    )
+  }
+
+  const theme = chatbot?.theme || {
+    primaryColor: '#3B82F6',
+    backgroundColor: '#FFFFFF',
+    textColor: '#1F2937'
+  }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 relative overflow-hidden">
-      {/* Animated background elements */}
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-primary/10 rounded-full blur-3xl animate-pulse" />
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-secondary/10 rounded-full blur-3xl animate-pulse delay-1000" />
-        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-96 h-96 bg-accent/5 rounded-full blur-3xl animate-pulse delay-500" />
-      </div>
-
-      <div className="relative z-10 flex items-center justify-center min-h-screen p-4">
-        <div className="max-w-6xl mx-auto text-center space-y-12">
-          {/* Hero Section */}
-          <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-1000">
-            <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-primary to-primary/80 rounded-3xl shadow-2xl shadow-primary/25 mb-6 group hover:scale-110 transition-transform duration-300">
-              <Sparkles className="text-white h-10 w-10 group-hover:rotate-12 transition-transform duration-300" />
-            </div>
-
-            <div className="space-y-4">
-              <h1 className="text-5xl md:text-7xl font-bold bg-gradient-to-r from-foreground via-primary to-foreground bg-clip-text text-transparent leading-tight">
-                Welcome to Our
-                <br />
-                <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-                  AI Support
-                </span>
-              </h1>
-              <p className="text-xl md:text-2xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
-                Get instant, intelligent assistance from our AI-powered support system. Available 24/7 to help you with
-                anything you need.
-              </p>
-            </div>
-
-            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-              <GradientButton className="group text-lg px-8 py-4">
-                <MessageSquare className="mr-2 h-5 w-5 group-hover:scale-110 transition-transform duration-300" />
-                Start Chatting Now
-                <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform duration-300" />
-              </GradientButton>
-              <p className="text-sm text-muted-foreground">Click the chat button in the bottom right corner</p>
-            </div>
-          </div>
-
-          {/* Features Grid */}
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mt-16">
-            {features.map((feature, index) => (
-              <AnimatedCard
-                key={feature.title}
-                className="p-6 text-center group animate-in slide-in-from-bottom-4 duration-700"
-                style={{ animationDelay: `${index * 200}ms` }}
-                glow
-              >
-                <div className="space-y-4">
-                  <div className="relative">
-                    <div
-                      className={`absolute inset-0 bg-gradient-to-r ${feature.color} opacity-20 rounded-full blur-xl group-hover:blur-2xl transition-all duration-500`}
-                    />
-                    <div
-                      className={`relative p-4 bg-gradient-to-r ${feature.color} rounded-2xl text-white shadow-lg group-hover:shadow-xl transition-all duration-300 group-hover:scale-110 inline-flex`}
-                    >
-                      <feature.icon className="h-8 w-8" />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <h3 className="text-lg font-semibold">{feature.title}</h3>
-                    <p className="text-sm text-muted-foreground leading-relaxed">{feature.description}</p>
-                  </div>
-                </div>
-              </AnimatedCard>
-            ))}
-          </div>
-
-          {/* Sample Questions */}
-          <AnimatedCard
-            className="p-8 max-w-4xl mx-auto animate-in slide-in-from-bottom-4 duration-1000 delay-500"
-            glow
-          >
-            <div className="space-y-6">
-              <div className="space-y-2">
-                <h2 className="text-2xl font-semibold">Try asking me something</h2>
-                <p className="text-muted-foreground">Here are some popular questions to get you started</p>
-              </div>
-
-              <div className="grid gap-3 md:grid-cols-2">
-                {sampleQuestions.map((question, index) => (
-                  <button
-                    key={question}
-                    onClick={() => setSelectedQuestion(question)}
-                    className="p-4 text-left border rounded-xl hover:bg-primary/5 hover:border-primary/50 transition-all duration-300 hover:shadow-lg hover:shadow-primary/10 hover:-translate-y-1 group animate-in slide-in-from-bottom-2 duration-500"
-                    style={{ animationDelay: `${index * 100 + 600}ms` }}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="font-medium group-hover:text-primary transition-colors duration-300">
-                        {question}
-                      </span>
-                      <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all duration-300" />
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-          </AnimatedCard>
-
-          {/* Call to Action */}
-          <div className="space-y-4 animate-in slide-in-from-bottom-4 duration-1000 delay-700">
-            <p className="text-lg text-muted-foreground">Ready to get started? Click the chat button below! 👇</p>
+    <div 
+      className="min-h-screen flex items-center justify-center p-4"
+      style={{ backgroundColor: theme.backgroundColor }}
+    >
+      <Card className="max-w-2xl w-full h-[600px] flex flex-col shadow-xl">
+        {/* Header */}
+        <div 
+          className="p-4 border-b flex items-center gap-3"
+          style={{ backgroundColor: theme.primaryColor, color: '#FFFFFF' }}
+        >
+          <Bot className="w-8 h-8" />
+          <div>
+            <h2 className="text-xl font-semibold">{chatbot?.name || 'Chatbot'}</h2>
+            {chatbot?.description && (
+              <p className="text-sm opacity-90">{chatbot.description}</p>
+            )}
           </div>
         </div>
-      </div>
 
-      <ChatWidget chatbotId="demo-bot" />
+        {/* Messages */}
+        <ScrollArea className="flex-1 p-4">
+          <div className="space-y-4">
+            {messages.map((message) => (
+              <div
+                key={message.id}
+                className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+              >
+                <div
+                  className={`flex gap-2 max-w-[80%] ${
+                    message.role === 'user' ? 'flex-row-reverse' : 'flex-row'
+                  }`}
+                >
+                  <div className="flex-shrink-0">
+                    {message.role === 'user' ? (
+                      <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
+                        <User className="w-5 h-5 text-primary-foreground" />
+                      </div>
+                    ) : (
+                      <div 
+                        className="w-8 h-8 rounded-full flex items-center justify-center"
+                        style={{ backgroundColor: theme.primaryColor }}
+                      >
+                        <Bot className="w-5 h-5 text-white" />
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <div
+                      className={`rounded-lg px-4 py-2 ${
+                        message.role === 'user'
+                          ? 'bg-primary text-primary-foreground'
+                          : 'bg-muted'
+                      }`}
+                      style={
+                        message.role === 'assistant' 
+                          ? { backgroundColor: '#F3F4F6', color: theme.textColor }
+                          : undefined
+                      }
+                    >
+                      <p className="whitespace-pre-wrap">{message.content}</p>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {format(new Date(message.created_at), 'HH:mm')}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ))}
+            
+            {isLoading && (
+              <div className="flex justify-start">
+                <div className="flex gap-2">
+                  <div 
+                    className="w-8 h-8 rounded-full flex items-center justify-center"
+                    style={{ backgroundColor: theme.primaryColor }}
+                  >
+                    <Bot className="w-5 h-5 text-white" />
+                  </div>
+                  <div className="bg-muted rounded-lg px-4 py-2">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {error && (
+              <div className="text-center text-sm text-destructive">
+                {error}
+              </div>
+            )}
+            
+            <div ref={messagesEndRef} />
+          </div>
+        </ScrollArea>
+
+        {/* Input */}
+        <div className="p-4 border-t">
+          <div className="flex gap-2">
+            <Input
+              ref={inputRef}
+              value={inputMessage}
+              onChange={(e) => setInputMessage(e.target.value)}
+              onKeyPress={handleKeyPress}
+              placeholder="Type your message..."
+              disabled={isLoading}
+              className="flex-1"
+            />
+            <Button
+              onClick={sendMessage}
+              disabled={!inputMessage.trim() || isLoading}
+              style={{ backgroundColor: theme.primaryColor }}
+            >
+              {isLoading ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Send className="w-4 h-4" />
+              )}
+            </Button>
+          </div>
+        </div>
+      </Card>
     </div>
   )
-} 
+}

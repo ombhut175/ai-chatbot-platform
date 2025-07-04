@@ -249,6 +249,100 @@ export class PineconeService {
   }
 
   /**
+   * Get all vectors from a namespace for a specific document using a more reliable approach
+   */
+  async getVectorsByDocumentId(
+    namespace: string,
+    documentId: string
+  ): Promise<{ success: boolean; results?: any[]; error?: string }> {
+    try {
+      const index = this.pinecone.index(this.indexName)
+
+      // Use a simple query with filter to get vectors for the specific document
+      // Create a dummy embedding - the filter will do the actual work
+      const embeddingResult = await this.createEmbeddings('query')
+      
+      if (!embeddingResult.success || !embeddingResult.embeddings) {
+        return { success: false, error: 'Failed to create dummy embedding for search' }
+      }
+
+      console.log(`🔍 Searching for vectors with documentId: ${documentId} in namespace: ${namespace}`)
+
+      // Search with filter for the specific document
+      const searchResult = await index.namespace(namespace).query({
+        vector: embeddingResult.embeddings,
+        topK: 10000, // High limit to get all vectors for this document
+        includeMetadata: true,
+        filter: { documentId: documentId }
+      })
+
+      console.log(`✅ Retrieved ${searchResult.matches?.length || 0} vectors for document ${documentId}`)
+      
+      return { success: true, results: searchResult.matches || [] }
+    } catch (error) {
+      console.error('Get vectors by document ID error:', error)
+      return { success: false, error: 'Failed to get vectors for document' }
+    }
+  }
+
+  /**
+   * Get all vectors from a namespace using a generic query approach (deprecated)
+   * @deprecated Use getVectorsByDocumentId for better reliability
+   */
+  async getAllVectorsFromNamespace(
+    namespace: string,
+    filter?: any
+  ): Promise<{ success: boolean; results?: any[]; error?: string }> {
+    try {
+      const index = this.pinecone.index(this.indexName)
+
+      // Use a generic query that should match most content
+      // We'll use a simple word that's likely to appear in most documents
+      const genericQueries = ['information', 'data', 'content', 'txt', 'document','text']
+      
+      let allResults: any[] = []
+      
+      for (const genericQuery of genericQueries) {
+        try {
+          const embeddingResult = await this.createEmbeddings(genericQuery)
+          
+          if (embeddingResult.success && embeddingResult.embeddings) {
+            // Search with a high topK to get many results
+            const searchResult = await index.namespace(namespace).query({
+              vector: embeddingResult.embeddings,
+              topK: 1000, // Get many vectors
+              includeMetadata: true,
+              filter
+            })
+
+            if (searchResult.matches) {
+              // Add results that we haven't seen before (based on ID)
+              const existingIds = new Set(allResults.map(r => r.id))
+              const newResults = searchResult.matches.filter(match => !existingIds.has(match.id))
+              allResults.push(...newResults)
+            }
+          }
+        } catch (queryError) {
+          console.warn(`Failed to query with "${genericQuery}":`, queryError)
+          continue
+        }
+      }
+
+      // Remove duplicates and sort by score
+      const uniqueResults = Array.from(
+        new Map(allResults.map(item => [item.id, item])).values()
+      ).sort((a, b) => (b.score || 0) - (a.score || 0))
+
+      console.log(`✅ Retrieved ${uniqueResults.length} vectors from namespace ${namespace}`)
+      
+      return { success: true, results: uniqueResults }
+    } catch (error) {
+      console.error('Get all vectors error:', error)
+      return { success: false, error: 'Failed to get vectors from namespace' }
+    }
+  }
+
+  /**
    * Search for similar documents
    */
   async searchSimilar(
@@ -258,16 +352,27 @@ export class PineconeService {
     filter?: any
   ): Promise<{ success: boolean; results?: any[]; error?: string }> {
     try {
+      // Handle empty or whitespace-only queries
+      if (!query || query.trim().length === 0) {
+        console.log('Empty query provided, using getAllVectorsFromNamespace instead')
+        return this.getAllVectorsFromNamespace(namespace, filter)
+      }
+
       const index = this.pinecone.index(this.indexName)
 
       // Create embedding for query
-      const embeddingResult = await this.createEmbeddings(query)
+      console.log(`🔍 Creating embeddings for query: "${query.substring(0, 50)}..." in namespace: ${namespace}`)
+      const embeddingResult = await this.createEmbeddings(query.trim())
       
       if (!embeddingResult.success || !embeddingResult.embeddings) {
+        console.error('❌ Embedding creation failed:', embeddingResult.error)
         return { success: false, error: 'Failed to create query embedding' }
       }
 
+      console.log(`✅ Query embedding created with ${embeddingResult.embeddings.length} dimensions`)
+
       // Search in Pinecone
+      console.log(`🔍 Searching in namespace "${namespace}" with topK=${topK}`)
       const searchResult = await index.namespace(namespace).query({
         vector: embeddingResult.embeddings,
         topK,
@@ -275,10 +380,12 @@ export class PineconeService {
         filter
       })
 
+      console.log(`✅ Search completed. Found ${searchResult.matches?.length || 0} matches`)
       return { success: true, results: searchResult.matches }
     } catch (error) {
       console.error('Search error:', error)
-      return { success: false, error: 'Failed to search documents' }
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      return { success: false, error: `Failed to search documents: ${errorMessage}` }
     }
   }
 
