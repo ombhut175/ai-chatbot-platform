@@ -12,7 +12,7 @@ This document outlines the backend flow for the multi-tenant AI chatbot platform
 | CRUD (companies, chatbots, etc.)|       ✅         |         ❌         | Supabase client SDK           |
 | File Upload (to Storage)        |       ✅         |         ❌         | Supabase Storage SDK          |
 | File Processing/Vectorization   |       ❌         |         ✅         | Needs server libs & secrets   |
-| AI Chat (OpenAI)                |       ❌         |         ✅         | API key must be secret        |
+| AI Chat (Hugging Face)          |       ❌         |         ✅         | API key must be secret        |
 | Pinecone/Vector DB              |       ❌         |         ✅         | API key must be secret        |
 | Analytics (basic)               |       ✅         |         ❌         | Supabase queries              |
 | Integrations (with secrets)     |       ❌         |         ✅         | API key must be secret        |
@@ -47,7 +47,7 @@ User Authentication → File Upload → Vector Processing → Chatbot Creation �
 ## 📁 3. File Upload & Processing Flow
 
 - **File upload to storage:** Can be done client-side with Supabase Storage SDK.
-- **File processing/vectorization:** Needs backend API route if you want to process files, extract text, or generate embeddings (OpenAI, Pinecone, etc.). For assignment/demo, you can mock this step.
+- **File processing/vectorization:** Needs backend API route if you want to process files, extract text, or generate embeddings (Hugging Face, Pinecone, etc.). For assignment/demo, you can mock this step.
 
 ---
 
@@ -60,7 +60,7 @@ User Authentication → File Upload → Vector Processing → Chatbot Creation �
 
 ## 💬 5. Chat Interface & AI Response
 
-- **AI chat (OpenAI):** MUST use backend API route to keep API key secret. Do not call OpenAI from the browser.
+- **AI chat (Hugging Face):** MUST use backend API route to keep API key secret. Do not call Hugging Face from the browser.
 
 ---
 

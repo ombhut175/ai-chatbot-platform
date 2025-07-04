@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState, useCallback } from "react"
+import { useState, useCallback, useRef } from "react"
 import { Upload, FileText, ImageIcon, File, X } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { AnimatedCard } from "./animated-card"
@@ -10,6 +10,7 @@ import { GradientButton } from "./gradient-button"
 
 interface UploadZoneProps {
   onFilesSelected: (files: FileList) => void
+  onUploadComplete?: () => void
   acceptedTypes?: string
   maxSize?: number
   multiple?: boolean
@@ -18,6 +19,7 @@ interface UploadZoneProps {
 
 export function EnhancedUploadZone({
   onFilesSelected,
+  onUploadComplete,
   acceptedTypes = ".pdf,.csv,.xlsx,.xls,.docx,.doc,.json,.txt",
   maxSize = 10 * 1024 * 1024, // 10MB
   multiple = true,
@@ -25,6 +27,7 @@ export function EnhancedUploadZone({
 }: UploadZoneProps) {
   const [dragActive, setDragActive] = useState(false)
   const [selectedFiles, setSelectedFiles] = useState<File[]>([])
+  const inputRef = useRef<HTMLInputElement>(null)
 
   const handleDrag = useCallback((e: React.DragEvent) => {
     e.preventDefault()
@@ -59,9 +62,23 @@ export function EnhancedUploadZone({
     }
   }
 
+  // Reset component state after upload completion
+  const resetUploadState = useCallback(() => {
+    setSelectedFiles([])
+    if (inputRef.current) {
+      inputRef.current.value = ''
+    }
+    onUploadComplete?.()
+  }, [onUploadComplete])
+
   const removeFile = (index: number) => {
     const newFiles = selectedFiles.filter((_, i) => i !== index)
     setSelectedFiles(newFiles)
+    
+    // If all files are removed, reset the input
+    if (newFiles.length === 0 && inputRef.current) {
+      inputRef.current.value = ''
+    }
   }
 
   const getFileIcon = (fileName: string) => {
@@ -103,6 +120,7 @@ export function EnhancedUploadZone({
         glow
       >
         <input
+          ref={inputRef}
           type="file"
           multiple={multiple}
           accept={acceptedTypes}
@@ -125,7 +143,7 @@ export function EnhancedUploadZone({
             <p className="text-sm text-muted-foreground">Maximum file size: {formatFileSize(maxSize)}</p>
           </div>
 
-          <GradientButton className="mt-4">
+          <GradientButton className="mt-4" type="button" onClick={() => inputRef.current?.click()}>
             <Upload className="mr-2 h-4 w-4" />
             Choose Files
           </GradientButton>

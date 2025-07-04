@@ -1,8 +1,8 @@
 "use client"
 
 import type React from "react"
-import { useState } from "react"
-import { Upload, File, Trash2, Eye, Plus, LinkIcon, Type, Clock } from "lucide-react"
+import { useState, useEffect } from "react"
+import { Upload, File, Trash2, Eye, Plus, LinkIcon, Type, Clock, AlertCircle } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -16,6 +16,8 @@ import { EnhancedUploadZone } from "@/components/ui/enhanced-upload-zone"
 import { cn } from "@/lib/utils"
 import { AnimatedCard } from "@/components/ui/animated-card"
 import { GradientButton } from "@/components/ui/gradient-button"
+import { useDataSources, useFileUpload, useDeleteDataSource } from "@/hooks/use-data-sources"
+import { useToast } from "@/hooks/use-toast"
 
 const fileTypeIcons: Record<DataSource["type"], string> = {
   pdf: "📄",
@@ -34,27 +36,48 @@ const statusColors: Record<DataSource["status"], string> = {
 }
 
 export default function DataSourcesClientPage() {
-  const [dataSources, setDataSources] = useState<DataSource[]>([])
   const [urlInput, setUrlInput] = useState("")
   const [qaQuestion, setQaQuestion] = useState("")
   const [qaAnswer, setQaAnswer] = useState("")
+  const [resetUploadZone, setResetUploadZone] = useState(0)
+  
+  // Use real hooks for data management
+  const { dataSources, isLoading, error, mutate } = useDataSources()
+  const { uploadFile, isUploading } = useFileUpload()
+  const { deleteDataSource } = useDeleteDataSource()
+  const { toast } = useToast()
 
-  const handleFiles = (files: FileList) => {
-    Array.from(files).forEach((file) => {
-      const newDataSource: DataSource = {
-        id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
-        name: file.name,
-        type: getFileType(file.name),
-        size: file.size,
-        status: "processing",
-        uploadedAt: new Date().toISOString(),
-        companyId: "1",
+  const handleFiles = async (files: FileList) => {
+    const fileArray = Array.from(files)
+    
+    for (const file of fileArray) {
+      try {
+        const result = await uploadFile(file)
+        
+        if (result.success) {
+          toast({
+            title: "File uploaded successfully",
+            description: `${file.name} has been uploaded and is being processed.`,
+          })
+        } else {
+          toast({
+            title: "Upload failed",
+            description: result.error || "Failed to upload file",
+            variant: "destructive",
+          })
+        }
+      } catch (error) {
+        console.error('Upload error:', error)
+        toast({
+          title: "Upload failed",
+          description: "An unexpected error occurred during upload",
+          variant: "destructive",
+        })
       }
-      setDataSources((prev) => [...prev, newDataSource])
-      setTimeout(() => {
-        setDataSources((prev) => prev.map((ds) => (ds.id === newDataSource.id ? { ...ds, status: "ready" } : ds)))
-      }, 2000)
-    })
+    }
+    
+    // Reset upload zone state after all files are processed (success or failure)
+    setResetUploadZone(prev => prev + 1)
   }
 
   const getFileType = (filename: string): DataSource["type"] => {
@@ -85,40 +108,53 @@ export default function DataSourcesClientPage() {
     return Number.parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i]
   }
 
-  const handleDeleteDataSource = (id: string) => {
-    setDataSources((prev) => prev.filter((ds) => ds.id !== id))
+  const handleDeleteDataSource = async (id: string) => {
+    try {
+      const result = await deleteDataSource(id)
+      
+      if (result.success) {
+        toast({
+          title: "Data source deleted",
+          description: "The data source has been successfully deleted.",
+        })
+      } else {
+        toast({
+          title: "Delete failed",
+          description: result.error || "Failed to delete data source",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      console.error('Delete error:', error)
+      toast({
+        title: "Delete failed",
+        description: "An unexpected error occurred while deleting",
+        variant: "destructive",
+      })
+    }
   }
 
   const handleUrlSubmit = () => {
     if (!urlInput.trim()) return
-    const newDataSource: DataSource = {
-      id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
-      name: `URL: ${urlInput}`,
-      type: "url",
-      size: 0,
-      status: "processing",
-      uploadedAt: new Date().toISOString(),
-      companyId: "1",
-    }
-    setDataSources((prev) => [...prev, newDataSource])
+    
+    // TODO: Implement URL scraping functionality
+    toast({
+      title: "URL Scraping",
+      description: "URL scraping functionality will be implemented soon.",
+      variant: "default",
+    })
     setUrlInput("")
-    setTimeout(() => {
-      setDataSources((prev) => prev.map((ds) => (ds.id === newDataSource.id ? { ...ds, status: "ready" } : ds)))
-    }, 3000)
   }
 
   const handleQaSubmit = () => {
     if (!qaQuestion.trim() || !qaAnswer.trim()) return
-    const newDataSource: DataSource = {
-      id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
-      name: `Q&A: ${qaQuestion.substring(0, 50)}...`,
-      type: "text",
-      size: new Blob([`Q: ${qaQuestion}\nA: ${qaAnswer}`]).size,
-      status: "ready",
-      uploadedAt: new Date().toISOString(),
-      companyId: "1",
-    }
-    setDataSources((prev) => [...prev, newDataSource])
+    
+    // TODO: Implement Q&A pairs functionality  
+    toast({
+      title: "Q&A Pairs",
+      description: "Q&A pairs functionality will be implemented soon.",
+      variant: "default",
+    })
     setQaQuestion("")
     setQaAnswer("")
   }
@@ -146,7 +182,10 @@ export default function DataSourcesClientPage() {
                   Add documents, spreadsheets, and other files to your knowledge base
                 </p>
               </div>
-              <EnhancedUploadZone onFilesSelected={handleFiles} />
+              <EnhancedUploadZone 
+                key={resetUploadZone} // Force re-render to reset state
+                onFilesSelected={handleFiles} 
+              />
             </div>
           </AnimatedCard>
         </TabsContent>
@@ -214,7 +253,22 @@ export default function DataSourcesClientPage() {
           <CardDescription>Manage your uploaded content and knowledge base</CardDescription>
         </CardHeader>
         <CardContent>
-          {dataSources.length === 0 ? (
+          {isLoading ? (
+            <div className="text-center py-12">
+              <div className="text-muted-foreground">Loading data sources...</div>
+            </div>
+          ) : error ? (
+            <div className="text-center py-12">
+              <div className="relative mb-6">
+                <div className="relative p-6 bg-destructive/10 rounded-full inline-flex">
+                  <AlertCircle className="h-16 w-16 text-destructive" />
+                </div>
+              </div>
+              <h3 className="text-2xl font-semibold mb-2 text-destructive">Error loading data sources</h3>
+              <p className="text-muted-foreground mb-6">{error}</p>
+              <Button onClick={() => mutate()}>Try Again</Button>
+            </div>
+          ) : !dataSources || dataSources.length === 0 ? (
             <div className="text-center py-12">
               <div className="relative mb-6">
                 <div className="absolute inset-0 bg-primary/20 rounded-full blur-xl" />
@@ -224,9 +278,9 @@ export default function DataSourcesClientPage() {
               </div>
               <h3 className="text-2xl font-semibold mb-2">No data sources yet</h3>
               <p className="text-muted-foreground mb-6">Upload your first file to get started with your AI chatbot</p>
-              <GradientButton>
+              <GradientButton disabled={isUploading}>
                 <Upload className="mr-2 h-4 w-4" />
-                Upload Your First File
+                {isUploading ? "Uploading..." : "Upload Your First File"}
               </GradientButton>
             </div>
           ) : (

@@ -2,7 +2,7 @@
 export const TableName = {
   COMPANIES: 'companies',
   USERS: 'users',
-  DATA_SOURCES: 'data-sources',
+  DATA_SOURCES: 'data_sources',
   CHATBOTS: 'chatbots',
   CHATBOT_DATA_SOURCES: 'chatbot_data_sources',
   INTEGRATIONS: 'integrations',

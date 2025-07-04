@@ -32,9 +32,14 @@ interface AppState {
   chatbots: Chatbot[]
   dataSources: DataSource[]
   selectedChatbot: Chatbot | null
+  uploading: boolean
   setChatbots: (chatbots: Chatbot[]) => void
   setDataSources: (dataSources: DataSource[]) => void
+  addDataSource: (dataSource: DataSource) => void
+  updateDataSource: (id: string, updates: Partial<DataSource>) => void
+  removeDataSource: (id: string) => void
   setSelectedChatbot: (chatbot: Chatbot | null) => void
+  setUploading: (uploading: boolean) => void
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -56,11 +61,24 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 }))
 
-export const useAppStore = create<AppState>((set) => ({
+export const useAppStore = create<AppState>((set, get) => ({
   chatbots: [],
   dataSources: [],
   selectedChatbot: null,
+  uploading: false,
   setChatbots: (chatbots) => set({ chatbots }),
   setDataSources: (dataSources) => set({ dataSources }),
+  addDataSource: (dataSource) => set(state => ({ 
+    dataSources: [dataSource, ...state.dataSources] 
+  })),
+  updateDataSource: (id, updates) => set(state => ({
+    dataSources: state.dataSources.map(ds => 
+      ds.id === id ? { ...ds, ...updates } : ds
+    )
+  })),
+  removeDataSource: (id) => set(state => ({
+    dataSources: state.dataSources.filter(ds => ds.id !== id)
+  })),
   setSelectedChatbot: (selectedChatbot) => set({ selectedChatbot }),
+  setUploading: (uploading) => set({ uploading }),
 }))

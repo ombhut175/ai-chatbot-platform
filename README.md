@@ -34,12 +34,14 @@ A multi-tenant platform to create, deploy, and manage AI-powered chatbots for yo
    npm install
    ```
 3. **Configure environment variables:**
-   - Copy `.env.example` to `.env` and adjust as needed:
+   - Copy `env.example.txt` to `.env` and adjust as needed:
      ```bash
-     cp env.example .env
+     cp env.example.txt .env
      ```
-   - The following environment variable is required:
+   - The following environment variables are required:
      - `NODE_ENV` (e.g., `development`)
+     - `HUGGING_FACE_API_URL` (e.g., `https://api-inference.huggingface.co/models/...`)
+     - `HUGGING_FACE_API_TOKEN` (your Hugging Face API token)
 
 4. **Run the development server:**
    ```bash
@@ -68,10 +70,12 @@ A multi-tenant platform to create, deploy, and manage AI-powered chatbots for yo
 
 ## Environment Variables
 
-See `env.example` for required variables. Currently:
+See `env.example.txt` for all required variables. Key variables include:
 
 ```
 NODE_ENV=development
+HUGGING_FACE_API_URL=your_hf_endpoint_url   # e.g. https://api-inference.huggingface.co/models/…
+HUGGING_FACE_API_TOKEN=your_hf_token
 ```
 
 ## Scripts

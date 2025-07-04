@@ -1,6 +1,8 @@
 import axios from "axios";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+// For Next.js API routes, we should use relative paths or the same domain
+// Only use a different base URL if explicitly configured for external API
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "";
 
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
@@ -8,15 +10,22 @@ export const apiClient = axios.create({
   headers: {
     "Content-Type": "application/json",
   },
+  timeout: 30000, // 30 seconds timeout for file uploads
 });
 
-// Add request interceptor for debugging
+// Add request interceptor for debugging and FormData handling
 apiClient.interceptors.request.use(
   (config) => {
+    // If we're sending FormData, remove the Content-Type header
+    // to let the browser set it automatically with the correct boundary
+    if (config.data instanceof FormData) {
+      delete config.headers['Content-Type'];
+    }
+    
     console.log("API Request:", {
       url: config.url,
       method: config.method,
-      data: config.data,
+      data: config.data instanceof FormData ? 'FormData' : config.data,
       headers: config.headers
     });
     return config;
