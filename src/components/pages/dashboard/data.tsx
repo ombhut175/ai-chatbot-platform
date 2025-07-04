@@ -16,17 +16,16 @@ import { EnhancedUploadZone } from "@/components/ui/enhanced-upload-zone"
 import { cn } from "@/lib/utils"
 import { AnimatedCard } from "@/components/ui/animated-card"
 import { GradientButton } from "@/components/ui/gradient-button"
-import { useDataSources, useFileUpload, useDeleteDataSource } from "@/hooks/use-data-sources"
+import { useDataSources, useFileUpload, useDeleteDataSource, useUrlScraping, useQaPairs } from "@/hooks/use-data-sources"
 import { useToast } from "@/hooks/use-toast"
 
 const fileTypeIcons: Record<DataSource["type"], string> = {
   pdf: "📄",
   csv: "📊",
   xlsx: "📈",
+  txt: "📄",
   docx: "📝",
   json: "🔧",
-  text: "📄",
-  url: "🔗",
 }
 
 const statusColors: Record<DataSource["status"], string> = {
@@ -40,11 +39,15 @@ export default function DataSourcesClientPage() {
   const [qaQuestion, setQaQuestion] = useState("")
   const [qaAnswer, setQaAnswer] = useState("")
   const [resetUploadZone, setResetUploadZone] = useState(0)
+  const [isScrapingUrl, setIsScrapingUrl] = useState(false)
+  const [isCreatingQa, setIsCreatingQa] = useState(false)
   
   // Use real hooks for data management
   const { dataSources, isLoading, error, mutate } = useDataSources()
   const { uploadFile, isUploading } = useFileUpload()
   const { deleteDataSource } = useDeleteDataSource()
+  const { scrapeUrl } = useUrlScraping()
+  const { createQaPair } = useQaPairs()
   const { toast } = useToast()
 
   const handleFiles = async (files: FileList) => {
@@ -96,7 +99,7 @@ export default function DataSourcesClientPage() {
       case "json":
         return "json"
       default:
-        return "text"
+        return "txt"
     }
   }
 
@@ -134,29 +137,39 @@ export default function DataSourcesClientPage() {
     }
   }
 
-  const handleUrlSubmit = () => {
-    if (!urlInput.trim()) return
+  const handleUrlSubmit = async () => {
+    if (!urlInput.trim() || isScrapingUrl) return
     
-    // TODO: Implement URL scraping functionality
-    toast({
-      title: "URL Scraping",
-      description: "URL scraping functionality will be implemented soon.",
-      variant: "default",
-    })
-    setUrlInput("")
+    try {
+      setIsScrapingUrl(true)
+      const result = await scrapeUrl(urlInput.trim())
+      
+      if (result.success) {
+        setUrlInput("")
+      }
+    } catch (error) {
+      console.error('URL scraping error:', error)
+    } finally {
+      setIsScrapingUrl(false)
+    }
   }
 
-  const handleQaSubmit = () => {
-    if (!qaQuestion.trim() || !qaAnswer.trim()) return
+  const handleQaSubmit = async () => {
+    if (!qaQuestion.trim() || !qaAnswer.trim() || isCreatingQa) return
     
-    // TODO: Implement Q&A pairs functionality  
-    toast({
-      title: "Q&A Pairs",
-      description: "Q&A pairs functionality will be implemented soon.",
-      variant: "default",
-    })
-    setQaQuestion("")
-    setQaAnswer("")
+    try {
+      setIsCreatingQa(true)
+      const result = await createQaPair(qaQuestion.trim(), qaAnswer.trim())
+      
+      if (result.success) {
+        setQaQuestion("")
+        setQaAnswer("")
+      }
+    } catch (error) {
+      console.error('Q&A pair creation error:', error)
+    } finally {
+      setIsCreatingQa(false)
+    }
   }
 
   return (
@@ -206,9 +219,9 @@ export default function DataSourcesClientPage() {
                   onChange={(e) => setUrlInput(e.target.value)}
                 />
               </div>
-              <Button onClick={handleUrlSubmit} disabled={!urlInput.trim()}>
+              <Button onClick={handleUrlSubmit} disabled={!urlInput.trim() || isScrapingUrl}>
                 <LinkIcon className="mr-2 h-4 w-4" />
-                Scrape URL
+                {isScrapingUrl ? "Scraping..." : "Scrape URL"}
               </Button>
             </CardContent>
           </Card>
@@ -239,9 +252,9 @@ export default function DataSourcesClientPage() {
                   rows={4}
                 />
               </div>
-              <Button onClick={handleQaSubmit} disabled={!qaQuestion.trim() || !qaAnswer.trim()}>
+              <Button onClick={handleQaSubmit} disabled={!qaQuestion.trim() || !qaAnswer.trim() || isCreatingQa}>
                 <Plus className="mr-2 h-4 w-4" />
-                Add Q&A Pair
+                {isCreatingQa ? "Creating..." : "Add Q&A Pair"}
               </Button>
             </CardContent>
           </Card>
@@ -249,8 +262,36 @@ export default function DataSourcesClientPage() {
       </Tabs>
       <Card>
         <CardHeader>
-          <CardTitle>Your Data Sources</CardTitle>
-          <CardDescription>Manage your uploaded content and knowledge base</CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Your Data Sources</CardTitle>
+              <CardDescription>Manage your uploaded content and knowledge base</CardDescription>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => mutate()}
+              disabled={isLoading}
+              className="ml-4 flex items-center"
+              title="Refresh"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`}
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M4 4v5h.582m15.356-2A9 9 0 11 6.343 6.343M20 20v-5h-.581"
+                />
+              </svg>
+              Refresh
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           {isLoading ? (

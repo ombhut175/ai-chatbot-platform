@@ -208,6 +208,116 @@ export function useUpdateDataSource() {
 }
 
 /**
+ * Hook to scrape URLs and create data sources
+ */
+export function useUrlScraping() {
+  const { userProfile } = useAuthStore()
+  const { addDataSource } = useAppStore()
+
+  const scrapeUrl = useCallback(async (url: string): Promise<{ success: boolean; data?: DataSource; error?: string }> => {
+    if (!userProfile?.company_id) {
+      return { success: false, error: 'User not associated with a company' }
+    }
+
+    try {
+      console.log('🕷️ Starting URL scraping:', url)
+
+      const result = await apiRequest.post<DataSource>('/api/scrape-url', { url })
+
+      if (result) {
+        console.log('✅ URL scraped successfully:', result)
+        
+        // Add to store immediately for optimistic updates
+        addDataSource(result)
+        
+        // Show success toast
+        toast({
+          title: "URL scraped successfully",
+          description: `Content from ${url} is being processed in the background.`,
+        })
+        
+        // Revalidate the data sources list to catch any updates
+        mutate(`/api/data-sources/${userProfile.company_id}`)
+
+        console.log('🎉 URL scraping process completed successfully')
+        return { success: true, data: result }
+      }
+
+      return { success: false, error: 'URL scraping failed' }
+    } catch (error: any) {
+      console.error('❌ URL scraping error:', error)
+      
+      const errorMessage = error.message || 'URL scraping failed'
+      
+      toast({
+        title: "URL scraping failed",
+        description: errorMessage,
+        variant: "destructive",
+      })
+
+      return { success: false, error: errorMessage }
+    }
+  }, [userProfile?.company_id, addDataSource])
+
+  return { scrapeUrl }
+}
+
+/**
+ * Hook to create Q&A pairs and add them as data sources
+ */
+export function useQaPairs() {
+  const { userProfile } = useAuthStore()
+  const { addDataSource } = useAppStore()
+
+  const createQaPair = useCallback(async (question: string, answer: string): Promise<{ success: boolean; data?: DataSource; error?: string }> => {
+    if (!userProfile?.company_id) {
+      return { success: false, error: 'User not associated with a company' }
+    }
+
+    try {
+      console.log('📝 Creating Q&A pair:', { question: question.substring(0, 50) + '...' })
+
+      const result = await apiRequest.post<DataSource>('/api/qa-pairs', { question, answer })
+
+      if (result) {
+        console.log('✅ Q&A pair created successfully:', result)
+        
+        // Add to store immediately for optimistic updates
+        addDataSource(result)
+        
+        // Show success toast
+        toast({
+          title: "Q&A pair created successfully",
+          description: "Your question and answer pair is being processed in the background.",
+        })
+        
+        // Revalidate the data sources list to catch any updates
+        mutate(`/api/data-sources/${userProfile.company_id}`)
+
+        console.log('🎉 Q&A pair creation completed successfully')
+        return { success: true, data: result }
+      }
+
+      return { success: false, error: 'Q&A pair creation failed' }
+    } catch (error: any) {
+      console.error('❌ Q&A pair creation error:', error)
+      
+      const errorMessage = error.message || 'Q&A pair creation failed'
+      
+      toast({
+        title: "Q&A pair creation failed",
+        description: errorMessage,
+        variant: "destructive",
+      })
+
+      return { success: false, error: errorMessage }
+    }
+  }, [userProfile?.company_id, addDataSource])
+
+  return { createQaPair }
+}
+
+/**
  * Hook to get data sources count
  */
 export function useDataSourcesCount() {

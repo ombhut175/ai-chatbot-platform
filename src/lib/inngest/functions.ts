@@ -5,6 +5,7 @@ import { createDataSourceService } from '@/lib/services/dataSource'
 import { createStorageService } from '@/lib/services/storage'
 import { Supabase } from '@/helpers/string_const/supabase'
 import { DataSourceStatus } from '@/helpers/string_const/dataSource'
+import { urlQaFunctions } from './urlQaFunctions'
 
 export const processFileFunction = inngest.createFunction(
   { id: 'process-file' },
@@ -378,5 +379,6 @@ export const handleProcessingError = inngest.createFunction(
 // Export all functions
 export const functions = [
   processFileFunction,
-  handleProcessingError
+  handleProcessingError,
+  ...urlQaFunctions
 ] 

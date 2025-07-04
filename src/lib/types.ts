@@ -31,7 +31,7 @@ export interface Company {
 export interface DataSource {
   id: string
   name: string
-  type: "pdf" | "csv" | "xlsx" | "docx" | "json" | "text" | "url"
+  type: "pdf" | "csv" | "xlsx" | "txt" | "docx" | "json"
   size: number
   status: "processing" | "ready" | "error"
   uploadedAt: string

@@ -3,10 +3,9 @@ export enum DataSourceType {
   PDF = 'pdf',
   CSV = 'csv',
   XLSX = 'xlsx',
+  TXT = 'txt',
   DOCX = 'docx',
   JSON = 'json',
-  TEXT = 'text',
-  URL = 'url',
 }
 
 // DATA SOURCE STATUS
