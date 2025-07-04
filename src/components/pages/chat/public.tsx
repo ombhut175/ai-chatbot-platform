@@ -11,9 +11,14 @@ import { format } from 'date-fns'
 
 interface Message {
   id: string
-  role: 'user' | 'assistant'
-  content: string
+  session_id: string
+  message: string
+  response?: string | null
+  message_type: 'user' | 'assistant'
+  tokens_used?: number | null
+  response_time_ms?: number | null
   created_at: string
+  chatbot_id?: string
 }
 
 interface ChatbotDetails {
@@ -70,9 +75,12 @@ export default function PublicChatPage() {
           if (data.data.welcome_message) {
             setMessages([{
               id: 'welcome',
-              role: 'assistant',
-              content: data.data.welcome_message,
-              created_at: new Date().toISOString()
+              session_id: sessionId || 'new',
+              message: '',
+              response: data.data.welcome_message,
+              message_type: 'assistant',
+              created_at: new Date().toISOString(),
+              chatbot_id: chatbotId
             }])
           }
         } else {
@@ -117,9 +125,11 @@ export default function PublicChatPage() {
 
     const userMessage: Message = {
       id: Date.now().toString(),
-      role: 'user',
-      content: inputMessage,
-      created_at: new Date().toISOString()
+      session_id: sessionId || 'new',
+      message: inputMessage,
+      message_type: 'user',
+      created_at: new Date().toISOString(),
+      chatbot_id: chatbotId
     }
 
     setMessages(prev => [...prev, userMessage])
@@ -145,9 +155,12 @@ export default function PublicChatPage() {
       if (data.success && data.data) {
         const assistantMessage: Message = {
           id: Date.now().toString() + '_assistant',
-          role: 'assistant',
-          content: data.data.message,
-          created_at: data.data.timestamp
+          session_id: sessionId || 'new',
+          message: '',
+          response: data.data.message,
+          message_type: 'assistant',
+          created_at: data.data.timestamp,
+          chatbot_id: chatbotId
         }
 
         setMessages(prev => [...prev, assistantMessage])
@@ -221,15 +234,15 @@ export default function PublicChatPage() {
             {messages.map((message) => (
               <div
                 key={message.id}
-                className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                className={`flex ${message.message_type === 'user' ? 'justify-end' : 'justify-start'}`}
               >
                 <div
                   className={`flex gap-2 max-w-[80%] ${
-                    message.role === 'user' ? 'flex-row-reverse' : 'flex-row'
+                    message.message_type === 'user' ? 'flex-row-reverse' : 'flex-row'
                   }`}
                 >
                   <div className="flex-shrink-0">
-                    {message.role === 'user' ? (
+                    {message.message_type === 'user' ? (
                       <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
                         <User className="w-5 h-5 text-primary-foreground" />
                       </div>
@@ -245,17 +258,17 @@ export default function PublicChatPage() {
                   <div>
                     <div
                       className={`rounded-lg px-4 py-2 ${
-                        message.role === 'user'
+                        message.message_type === 'user'
                           ? 'bg-primary text-primary-foreground'
                           : 'bg-muted'
                       }`}
                       style={
-                        message.role === 'assistant' 
+                        message.message_type === 'assistant' 
                           ? { backgroundColor: '#F3F4F6', color: theme.textColor }
                           : undefined
                       }
                     >
-                      <p className="whitespace-pre-wrap">{message.content}</p>
+                      <p className="whitespace-pre-wrap">{message.message_type === 'user' ? message.message : message.response}</p>
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">
                       {format(new Date(message.created_at), 'HH:mm')}

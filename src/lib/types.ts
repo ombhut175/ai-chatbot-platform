@@ -58,10 +58,14 @@ export interface Chatbot {
 
 export interface ChatMessage {
   id: string
-  content: string
-  role: "user" | "assistant"
-  timestamp: string
-  chatbotId?: string
+  session_id: string
+  message: string
+  response?: string | null
+  message_type: "user" | "assistant"
+  tokens_used?: number | null
+  response_time_ms?: number | null
+  created_at: string
+  chatbot_id?: string
 }
 
 export interface Integration {

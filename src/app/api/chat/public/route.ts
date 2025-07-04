@@ -50,14 +50,15 @@ export async function POST(request: NextRequest) {
     // Create or get session
     let currentSessionId = sessionId
     if (!currentSessionId) {
-      // Create new session
+      // Create new session - generate a unique session_id string
       currentSessionId = uuidv4()
       const { error: sessionError } = await supabase
         .from(TableName.CHAT_SESSIONS)
         .insert({
-          id: currentSessionId,
           chatbot_id: chatbotId,
-          started_at: new Date().toISOString()
+          session_id: currentSessionId,
+          user_ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
+          user_agent: request.headers.get('user-agent') || 'unknown'
         })
 
       if (sessionError) {
@@ -71,9 +72,8 @@ export async function POST(request: NextRequest) {
       .insert({
         session_id: currentSessionId,
         chatbot_id: chatbotId,
-        role: 'user',
-        content: message,
-        created_at: new Date().toISOString()
+        message_type: 'user',
+        message: message
       })
 
     if (userMessageError) {
@@ -179,9 +179,8 @@ export async function POST(request: NextRequest) {
       .insert({
         session_id: currentSessionId,
         chatbot_id: chatbotId,
-        role: 'assistant',
-        content: geminiResult.response,
-        created_at: new Date().toISOString()
+        message_type: 'assistant',
+        response: geminiResult.response
       })
 
     if (assistantMessageError) {

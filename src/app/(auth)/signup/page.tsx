@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import SignupForm from "@/components/pages/auth/signup";
 
 export default function SignupPage() {
@@ -10,7 +11,11 @@ export default function SignupPage() {
         <div className="absolute top-1/3 left-1/3 w-64 h-64 bg-accent/5 rounded-full blur-3xl animate-pulse delay-700" />
       </div>
       <div className="w-full max-w-md relative z-10">
-        <SignupForm />
+        <Suspense fallback={
+          <div className="w-full h-[600px] animate-pulse bg-card/50 rounded-2xl" />
+        }>
+          <SignupForm />
+        </Suspense>
       </div>
     </div>
   )

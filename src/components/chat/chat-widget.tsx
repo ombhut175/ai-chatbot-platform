@@ -30,9 +30,12 @@ export function ChatWidget({
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: "1",
-      content: "Hello! I'm your AI assistant. How can I help you today? ✨",
-      role: "assistant",
-      timestamp: new Date().toISOString(),
+      session_id: "demo",
+      message: "",
+      response: "Hello! I'm your AI assistant. How can I help you today? ✨",
+      message_type: "assistant",
+      created_at: new Date().toISOString(),
+      chatbot_id: chatbotId,
     },
   ])
   const [inputValue, setInputValue] = useState("")
@@ -52,9 +55,11 @@ export function ChatWidget({
 
     const userMessage: ChatMessage = {
       id: Date.now().toString(),
-      content: inputValue,
-      role: "user",
-      timestamp: new Date().toISOString(),
+      session_id: "demo",
+      message: inputValue,
+      message_type: "user",
+      created_at: new Date().toISOString(),
+      chatbot_id: chatbotId,
     }
 
     setMessages((prev) => [...prev, userMessage])
@@ -72,9 +77,12 @@ export function ChatWidget({
 
       const botMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
-        content: responses[Math.floor(Math.random() * responses.length)],
-        role: "assistant",
-        timestamp: new Date().toISOString(),
+        session_id: "demo",
+        message: "",
+        response: responses[Math.floor(Math.random() * responses.length)],
+        message_type: "assistant",
+        created_at: new Date().toISOString(),
+        chatbot_id: chatbotId,
       }
       setMessages((prev) => [...prev, botMessage])
       setIsTyping(false)
@@ -167,17 +175,17 @@ export function ChatWidget({
                 {messages.map((message, index) => (
                   <div
                     key={message.id}
-                    className={`flex animate-in slide-in-from-bottom-2 duration-500 ${message.role === "user" ? "justify-end" : "justify-start"}`}
+                    className={`flex animate-in slide-in-from-bottom-2 duration-500 ${message.message_type === "user" ? "justify-end" : "justify-start"}`}
                     style={{ animationDelay: `${index * 100}ms` }}
                   >
                     <div
                       className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm shadow-lg transition-all duration-300 hover:shadow-xl ${
-                        message.role === "user"
+                        message.message_type === "user"
                           ? "bg-gradient-to-r from-primary to-primary/90 text-primary-foreground ml-4"
                           : "bg-gradient-to-r from-muted to-muted/80 text-foreground mr-4 border border-border/50"
                       }`}
                     >
-                      {message.content}
+                      {message.message_type === "user" ? message.message : message.response}
                     </div>
                   </div>
                 ))}
