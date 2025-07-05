@@ -3,7 +3,7 @@
 import type React from "react"
 
 import { useState, useRef, useEffect } from "react"
-import { Send, X, MessageCircle, Minimize2, Sparkles } from "lucide-react"
+import { Send, X, MessageCircle, Minimize2, Sparkles, Loader2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -11,6 +11,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { AnimatedCard } from "@/components/ui/animated-card"
 import type { ChatMessage } from "@/lib/types"
+import { apiRequest } from "@/helpers/request"
 
 interface ChatWidgetProps {
   chatbotId: string
@@ -27,19 +28,13 @@ export function ChatWidget({
 }: ChatWidgetProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [isMinimized, setIsMinimized] = useState(false)
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      id: "1",
-      session_id: "demo",
-      message: "",
-      response: "Hello! I'm your AI assistant. How can I help you today? ✨",
-      message_type: "assistant",
-      created_at: new Date().toISOString(),
-      chatbot_id: chatbotId,
-    },
-  ])
+  const [messages, setMessages] = useState<ChatMessage[]>([])
   const [inputValue, setInputValue] = useState("")
   const [isTyping, setIsTyping] = useState(false)
+  const [sessionId, setSessionId] = useState<string | null>(null)
+  const [chatbotData, setChatbotData] = useState<any>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   const scrollToBottom = () => {
@@ -50,12 +45,74 @@ export function ChatWidget({
     scrollToBottom()
   }, [messages])
 
+  // Load chatbot details and initialize session
+  useEffect(() => {
+    const loadChatbot = async () => {
+      if (!chatbotId) return
+
+      setIsLoading(true)
+      setError(null)
+
+      try {
+        // First, get chatbot details
+        const response = await fetch(`/api/chatbots/details/${chatbotId}`)
+        const data = await response.json()
+
+        if (data.success && data.data) {
+          setChatbotData(data.data)
+          
+          // Check for existing session in localStorage
+          const storedSessionId = localStorage.getItem(`chat_session_${chatbotId}`)
+          if (storedSessionId) {
+            setSessionId(storedSessionId)
+            // Load chat history
+            loadChatHistory(storedSessionId)
+          } else if (data.data.welcome_message) {
+            // Add welcome message if no existing session
+            const welcomeMessage: ChatMessage = {
+              id: "welcome_" + Date.now(),
+              session_id: "new",
+              message: "",
+              response: data.data.welcome_message,
+              message_type: "assistant",
+              created_at: new Date().toISOString(),
+              chatbot_id: chatbotId,
+            }
+            setMessages([welcomeMessage])
+          }
+        } else {
+          setError(data.error || "Failed to load chatbot")
+        }
+      } catch (err) {
+        console.error("Failed to load chatbot:", err)
+        setError("Failed to load chatbot")
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    loadChatbot()
+  }, [chatbotId])
+
+  const loadChatHistory = async (sessionId: string) => {
+    try {
+      const response = await apiRequest.get<ChatMessage[]>(
+        `/api/chat?sessionId=${sessionId}&chatbotId=${chatbotId}`
+      )
+      if (response && response.length > 0) {
+        setMessages(response)
+      }
+    } catch (err) {
+      console.error("Failed to load chat history:", err)
+    }
+  }
+
   const handleSendMessage = async () => {
-    if (!inputValue.trim()) return
+    if (!inputValue.trim() || !chatbotId) return
 
     const userMessage: ChatMessage = {
       id: Date.now().toString(),
-      session_id: "demo",
+      session_id: sessionId || "new",
       message: inputValue,
       message_type: "user",
       created_at: new Date().toISOString(),
@@ -65,28 +122,43 @@ export function ChatWidget({
     setMessages((prev) => [...prev, userMessage])
     setInputValue("")
     setIsTyping(true)
+    setError(null)
 
-    // Simulate bot response
-    setTimeout(() => {
-      const responses = [
-        "Thank you for your message! I'm here to help you with any questions you might have. 🤖",
-        "That's a great question! Let me help you with that. ✨",
-        "I understand what you're looking for. Here's what I can tell you... 💡",
-        "Excellent! I'd be happy to assist you with that. 🚀",
-      ]
+    try {
+      const response = await apiRequest.post<{
+        message: string
+        sessionId: string
+        timestamp: string
+      }>("/api/chat", {
+        message: userMessage.message,
+        chatbotId,
+        sessionId,
+      })
+
+      // Store session ID if new
+      if (!sessionId && response.sessionId) {
+        setSessionId(response.sessionId)
+        localStorage.setItem(`chat_session_${chatbotId}`, response.sessionId)
+      }
 
       const botMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
-        session_id: "demo",
+        session_id: sessionId || response.sessionId,
         message: "",
-        response: responses[Math.floor(Math.random() * responses.length)],
+        response: response.message,
         message_type: "assistant",
-        created_at: new Date().toISOString(),
+        created_at: response.timestamp,
         chatbot_id: chatbotId,
       }
       setMessages((prev) => [...prev, botMessage])
+    } catch (err) {
+      console.error("Failed to send message:", err)
+      setError("Failed to send message. Please try again.")
+      // Remove the user message on error
+      setMessages((prev) => prev.filter((msg) => msg.id !== userMessage.id))
+    } finally {
       setIsTyping(false)
-    }, 1500)
+    }
   }
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -117,8 +189,48 @@ export function ChatWidget({
         >
           <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
           <MessageCircle className="h-7 w-7 group-hover:scale-110 transition-transform duration-300" />
-          <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full animate-pulse" />
+          {chatbotData && <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full animate-pulse" />}
         </Button>
+      </div>
+    )
+  }
+
+  if (isLoading) {
+    return (
+      <div className={`fixed ${positionClasses[position]} z-50`}>
+        <AnimatedCard
+          className={`${widgetSizes[size]} backdrop-blur-xl bg-card/95 border-border/50 shadow-2xl transition-all duration-500 flex items-center justify-center`}
+          glow
+        >
+          <div className="text-center">
+            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2" />
+            <p className="text-sm text-muted-foreground">Loading chatbot...</p>
+          </div>
+        </AnimatedCard>
+      </div>
+    )
+  }
+
+  if (error && !chatbotData) {
+    return (
+      <div className={`fixed ${positionClasses[position]} z-50`}>
+        <AnimatedCard
+          className={`${widgetSizes[size]} backdrop-blur-xl bg-card/95 border-border/50 shadow-2xl transition-all duration-500 p-4`}
+          glow
+        >
+          <div className="flex items-center justify-between mb-4">
+            <p className="text-sm font-medium text-destructive">Error loading chatbot</p>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => setIsOpen(false)}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+          <p className="text-sm text-muted-foreground">{error}</p>
+        </AnimatedCard>
       </div>
     )
   }
@@ -139,7 +251,7 @@ export function ChatWidget({
             </Avatar>
             <div>
               <p className="font-semibold text-sm bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
-                AI Assistant
+                {chatbotData?.name || "AI Assistant"}
               </p>
               <div className="flex items-center space-x-1">
                 <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
@@ -206,6 +318,13 @@ export function ChatWidget({
                     </div>
                   </div>
                 )}
+                {error && (
+                  <div className="flex justify-center animate-in slide-in-from-bottom-2 duration-300">
+                    <div className="bg-destructive/10 text-destructive rounded-lg px-4 py-2 text-sm max-w-[80%]">
+                      {error}
+                    </div>
+                  </div>
+                )}
                 <div ref={messagesEndRef} />
               </div>
             </ScrollArea>
@@ -224,6 +343,7 @@ export function ChatWidget({
                   onClick={handleSendMessage}
                   size="icon"
                   className="rounded-full bg-gradient-to-r from-primary to-primary/80 hover:scale-110 transition-all duration-300 shadow-lg hover:shadow-xl hover:shadow-primary/25"
+                  disabled={!inputValue.trim() || isTyping}
                 >
                   <Send className="h-4 w-4" />
                 </Button>

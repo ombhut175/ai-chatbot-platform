@@ -1,6 +1,11 @@
 import { Suspense } from "react"
 import PublicChatPage from "@/components/pages/chat/public"
 
+/**
+ * @deprecated Use /chat route instead with chatbotId query parameter
+ * This route is kept for backward compatibility
+ * Example: /chat?chatbotId=your-chatbot-id
+ */
 export default function Page() {
   return (
     <Suspense fallback={

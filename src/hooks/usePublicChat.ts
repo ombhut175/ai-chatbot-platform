@@ -79,7 +79,7 @@ export const useChatHistory = (sessionId: string | null, chatbotId: string | nul
   
   const { data, error, isLoading, mutate } = useSWR(
     sessionId && chatbotId 
-      ? `/api/chat/public?sessionId=${sessionId}&chatbotId=${chatbotId}` 
+      ? `/api/chat?sessionId=${sessionId}&chatbotId=${chatbotId}` 
       : null,
     chatHistoryFetcher,
     {
@@ -136,7 +136,7 @@ export const useSendMessage = () => {
     
     try {
       const response = await apiRequest.post<SendMessageResponse>(
-        '/api/chat/public',
+        '/api/chat',
         {
           message,
           chatbotId,

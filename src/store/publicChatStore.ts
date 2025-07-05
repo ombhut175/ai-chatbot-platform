@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { immer } from 'zustand/middleware/immer'
+import { type Chatbot } from '@/lib/types'
 
 interface Message {
   id: string
@@ -13,23 +14,11 @@ interface Message {
   chatbot_id?: string
 }
 
-interface ChatbotDetails {
-  id: string
-  name: string
-  description: string | null
-  welcome_message: string | null
-  theme: {
-    primaryColor: string
-    backgroundColor: string
-    textColor: string
-  } | null
-}
-
 interface PublicChatState {
   // State
   messages: Message[]
   sessionId: string | null
-  chatbot: ChatbotDetails | null
+  chatbot: Chatbot | null
   isLoading: boolean
   isSending: boolean
   error: string | null
@@ -39,7 +28,7 @@ interface PublicChatState {
   setMessages: (messages: Message[]) => void
   addMessage: (message: Message) => void
   setSessionId: (sessionId: string) => void
-  setChatbot: (chatbot: ChatbotDetails) => void
+  setChatbot: (chatbot: Chatbot) => void
   setIsLoading: (isLoading: boolean) => void
   setIsSending: (isSending: boolean) => void
   setError: (error: string | null) => void
@@ -103,9 +92,11 @@ export const usePublicChatStore = create<PublicChatState>()(
     resetChat: () => set((state) => {
       state.messages = []
       state.sessionId = null
+      state.chatbot = null
       state.error = null
       state.inputMessage = ''
       state.isSending = false
+      state.isLoading = false
     })
   }))
 )

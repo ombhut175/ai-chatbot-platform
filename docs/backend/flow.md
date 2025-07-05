@@ -90,25 +90,32 @@ User Authentication → File Upload → Vector Processing → Chatbot Creation �
 
 For production/scalable systems, implement all backend API routes as originally described for security, maintainability, and scalability.
 
-### Required API Route:
+### Unified Chat API Route:
 
 ```typescript
 // /api/chat/route.ts
 POST /api/chat
 {
-  "chatbot_id": "uuid",
+  "chatbotId": "uuid",
   "message": "User question",
-  "session_id": "session_uuid", // For conversation context
-  "context": "additional_context" // Optional
+  "sessionId": "session_uuid" // Optional, for conversation context
 }
 
 Response:
 {
-  "response": "AI generated answer",
-  "sources": ["doc1.pdf page 2", "doc2.csv row 15"],
-  "session_id": "session_uuid"
+  "success": true,
+  "data": {
+    "message": "AI generated answer",
+    "sessionId": "session_uuid",
+    "timestamp": "2024-01-05T..."
+  }
 }
 ```
+
+The `/api/chat` endpoint automatically:
+- Detects if the chatbot is public or internal
+- Handles authentication for internal chatbots
+- Works without authentication for public chatbots
 
 ---
 

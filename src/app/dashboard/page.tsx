@@ -62,7 +62,7 @@ const quickActions = [
     description: "Try out your chatbots",
     icon: MessageSquare,
     color: "from-green-500 to-green-600",
-    href: AppRoute.CHAT_PUBLIC,
+    href: AppRoute.CHAT + '?chatbotId=sample', // Will need actual chatbot ID
   },
   {
     title: "View Analytics",

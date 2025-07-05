@@ -9,11 +9,17 @@ export const config = {
   matcher: [
     /*
      * Match all request paths except for the ones starting with:
+     * - api/chat (unified chat API - handles both public and internal)
+     * - api/chatbots/public (public chatbot data API)
+     * - api/chatbots/details (chatbot details API - public accessible)
+     * - chat (unified chat page - handles auth internally)
+     * - chat/public (legacy public chat page)
+     * - widget.js (the JS widget script)
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
-     * Feel free to modify this pattern to include more paths.
+     * - and other static assets
      */
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!api/chat|api/chatbots/public/.*|api/chatbots/details/.*|chat(?!/internal)|widget\\.js|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
-} 
+}

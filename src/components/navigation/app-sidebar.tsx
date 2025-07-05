@@ -3,7 +3,7 @@
 import type * as React from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Bot, Database, Home, Plug, Settings, User, ChevronUp, Sparkles, Users } from "lucide-react"
+import { Bot, Database, Home, Settings, User, ChevronUp, Sparkles, Users } from "lucide-react"
 import { AppRoute } from "@/helpers/string_const/routes"
 
 import {
@@ -39,11 +39,6 @@ const getNavItems = (isOwner: boolean) => [
     title: "Chatbots",
     url: AppRoute.DASHBOARD_CHATBOTS,
     icon: Bot,
-  },
-  {
-    title: "Integrations",
-    url: AppRoute.DASHBOARD_INTEGRATIONS,
-    icon: Plug,
   },
   ...(isOwner ? [{
     title: "Users",

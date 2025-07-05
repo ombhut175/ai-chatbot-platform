@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Plus, Bot, Settings, Play, Pause, Eye, Trash2, AlertCircle } from "lucide-react"
+import { Plus, Bot, Settings, Play, Pause, Eye, Trash2, AlertCircle, Plug } from "lucide-react"
 import Link from "next/link"
 
 import { Button } from "@/components/ui/button"
@@ -363,7 +363,7 @@ export default function ChatbotsPage() {
                     >
                       {chatbot.is_active ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
                     </Button>
-                    <Link href={chatbot.type === "public" ? `/chat/public?chatbotId=${chatbot.id}` : `/chat/internal?chatbotId=${chatbot.id}`}>
+                    <Link href={`/chat?chatbotId=${chatbot.id}`}>
                       <Button
                         variant="outline"
                         size="sm"
@@ -371,6 +371,16 @@ export default function ChatbotsPage() {
                         title={`Open ${chatbot.type} chat interface`}
                       >
                         <Eye className="h-4 w-4" />
+                      </Button>
+                    </Link>
+                    <Link href={`/dashboard/chatbots/integrations/${chatbot.id}`}>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="hover:bg-purple-500/10 hover:text-purple-600 transition-all duration-300 hover:scale-105 bg-transparent"
+                        title="Manage integrations"
+                      >
+                        <Plug className="h-4 w-4" />
                       </Button>
                     </Link>
                     <Button

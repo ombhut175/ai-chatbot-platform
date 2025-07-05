@@ -62,27 +62,44 @@ export default function PublicChatPage() {
 
   // Track if we've loaded the chatbot
   const chatbotLoadedRef = useRef(false)
+  const previousChatbotIdRef = useRef<string | null>(null)
+
+  // Reset state when chatbotId changes
+  useEffect(() => {
+    if (previousChatbotIdRef.current && previousChatbotIdRef.current !== chatbotId) {
+      // Different chatbot, reset everything
+      resetChat()
+      chatbotLoadedRef.current = false
+      if (chatbotId) {
+        sessionStorage.removeItem(`chat_session_${previousChatbotIdRef.current}`)
+      }
+    }
+    previousChatbotIdRef.current = chatbotId
+  }, [chatbotId, resetChat])
 
   // Load chatbot details using fetch (public endpoint doesn't require auth)
   useEffect(() => {
     const loadChatbot = async () => {
-      if (!chatbotId || chatbotLoadedRef.current) {
-        if (!chatbotId) {
-          setError('No chatbot ID provided')
-        }
+      if (!chatbotId) {
+        setError('No chatbot ID provided')
+        return
+      }
+
+      // Skip if already loaded for this chatbot
+      if (chatbotLoadedRef.current && chatbot?.id === chatbotId) {
         return
       }
 
       setIsLoading(true)
       try {
-        const response = await fetch(`/api/chatbots/public/${chatbotId}`)
+        const response = await fetch(`/api/chatbots/details/${chatbotId}`)
         const data = await response.json()
 
         if (data.success && data.data) {
           setChatbot(data.data)
           chatbotLoadedRef.current = true
         } else {
-          setError('Failed to load chatbot')
+          setError(data.error || 'Failed to load chatbot')
         }
       } catch (err) {
         console.error('Failed to load chatbot:', err)
@@ -93,7 +110,7 @@ export default function PublicChatPage() {
     }
 
     loadChatbot()
-  }, [chatbotId, setError, setIsLoading, setChatbot])
+  }, [chatbotId, chatbot?.id, setError, setIsLoading, setChatbot])
 
   // Add welcome message only when appropriate
   useEffect(() => {

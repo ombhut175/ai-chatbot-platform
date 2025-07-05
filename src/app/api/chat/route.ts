@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createPublicClient } from '@/lib/supabase/public'
 import { pineconeService } from '@/lib/services/pinecone'
 import { geminiService } from '@/lib/services/gemini'
 import { TableName } from '@/helpers/string_const/tables'
 import { v4 as uuidv4 } from 'uuid'
 
 export async function POST(request: NextRequest) {
-  console.log('💬 Public chat API called')
+  console.log('💬 Unified chat API called')
   
   try {
     const body = await request.json()
@@ -21,26 +22,98 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    console.log('📝 Chat request:', {
-      chatbotId,
-      sessionId,
-      messageLength: message.length
-    })
-
-    // Get chatbot details from Supabase
-    const supabase = await createClient()
-    const { data: chatbot, error: chatbotError } = await supabase
+    // First, determine chatbot type using public client
+    const publicSupabase = await createPublicClient()
+    const { data: chatbotInfo, error: infoError } = await publicSupabase
       .from(TableName.CHATBOTS)
-      .select('*, company_id')
+      .select('id, type, company_id, is_active')
       .eq('id', chatbotId)
-      .eq('is_active', true)
       .single()
 
-    if (chatbotError || !chatbot) {
-      console.error('❌ Chatbot not found or inactive:', chatbotError)
+    if (infoError || !chatbotInfo || !chatbotInfo.is_active) {
+      console.error('❌ Chatbot not found or inactive:', infoError)
       return NextResponse.json(
         { error: 'Chatbot not found or inactive' },
         { status: 404 }
+      )
+    }
+
+    // Handle based on chatbot type
+    let supabase: any
+    let userId: string | null = null
+    let userCompanyId: string | null = null
+
+    if (chatbotInfo.type === 'internal') {
+      // Internal chatbot requires authentication
+      console.log('🔐 Internal chatbot - verifying authentication')
+      
+      const authSupabase = await createClient()
+      const { data: { user }, error: authError } = await authSupabase.auth.getUser()
+      
+      if (authError || !user) {
+        console.error('❌ Authentication required for internal chatbot')
+        return NextResponse.json(
+          { error: 'Authentication required for internal chatbots' },
+          { status: 401 }
+        )
+      }
+
+      // Get user profile to verify company access
+      const { data: userProfile, error: profileError } = await authSupabase
+        .from(TableName.USERS)
+        .select('company_id, role')
+        .eq('id', user.id)
+        .single()
+
+      if (profileError || !userProfile) {
+        console.error('❌ Failed to get user profile:', profileError)
+        return NextResponse.json(
+          { error: 'User profile not found' },
+          { status: 404 }
+        )
+      }
+
+      // Verify user belongs to the same company
+      if (userProfile.company_id !== chatbotInfo.company_id) {
+        console.error('❌ User not authorized to access this chatbot')
+        return NextResponse.json(
+          { error: 'Not authorized to access this chatbot' },
+          { status: 403 }
+        )
+      }
+
+      // Check if user is NOT a visitor (allow employee, admin, and owner)
+      if (userProfile.role === 'visitor') {
+        console.error('❌ Visitors cannot access internal chatbots:', userProfile.role)
+        return NextResponse.json(
+          { error: 'Internal chatbots are restricted to company staff only' },
+          { status: 403 }
+        )
+      }
+
+      supabase = authSupabase
+      userId = user.id
+      userCompanyId = userProfile.company_id
+      console.log('✅ User authenticated for internal chatbot:', user.email)
+      
+    } else {
+      // Public chatbot - no authentication required
+      supabase = publicSupabase
+      console.log('✅ Public chatbot access')
+    }
+
+    // Fetch full chatbot details
+    const { data: chatbot, error: chatbotError } = await supabase
+      .from(TableName.CHATBOTS)
+      .select('*')
+      .eq('id', chatbotId)
+      .single()
+
+    if (chatbotError || !chatbot) {
+      console.error('❌ Failed to fetch chatbot details:', chatbotError)
+      return NextResponse.json(
+        { error: 'Failed to fetch chatbot details' },
+        { status: 500 }
       )
     }
 
@@ -50,16 +123,22 @@ export async function POST(request: NextRequest) {
     // Create or get session
     let currentSessionId = sessionId
     if (!currentSessionId) {
-      // Create new session - generate a unique session_id string
       currentSessionId = uuidv4()
+      const sessionData: any = {
+        chatbot_id: chatbotId,
+        session_id: currentSessionId,
+        user_ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
+        user_agent: request.headers.get('user-agent') || 'unknown'
+      }
+
+      // Add user_id for internal chatbot sessions
+      if (chatbot.type === 'internal' && userId) {
+        sessionData.user_id = userId
+      }
+
       const { error: sessionError } = await supabase
         .from(TableName.CHAT_SESSIONS)
-        .insert({
-          chatbot_id: chatbotId,
-          session_id: currentSessionId,
-          user_ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
-          user_agent: request.headers.get('user-agent') || 'unknown'
-        })
+        .insert(sessionData)
 
       if (sessionError) {
         console.error('❌ Failed to create session:', sessionError)
@@ -103,19 +182,15 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Search for relevant context in Pinecone using chatbot's namespace
+    // Search for relevant context in Pinecone
     const namespace = chatbot.pinecone_namespace
     console.log(`🔍 Searching in Pinecone namespace: ${namespace}`)
-    
-    // Search for similar content in the chatbot's namespace using pre-computed embeddings
-    console.log('🔍 Searching for:', message)
-    console.log('🎯 Using embeddings dimensions:', embeddingResult.embeddings?.length)
     
     const searchResult = await pineconeService.searchSimilarWithEmbeddings(
       embeddingResult.embeddings,
       namespace,
       40, // Get top 40 most relevant chunks
-      undefined // No filter needed as namespace is specific to chatbot
+      undefined
     )
 
     if (!searchResult.success) {
@@ -127,28 +202,6 @@ export async function POST(request: NextRequest) {
     }
 
     console.log(`✅ Found ${searchResult.results?.length || 0} relevant chunks`)
-    
-    // Log search results for debugging
-    if (searchResult.results && searchResult.results.length > 0) {
-      console.log('📊 Top 3 results:')
-      searchResult.results.slice(0, 3).forEach((result, index) => {
-        console.log(`  ${index + 1}. Score: ${result.score}, Text preview: ${result.metadata?.text?.substring(0, 100)}...`)
-      })
-    } else {
-      console.log('⚠️ No results found in namespace. Checking namespace content...')
-      
-      // Try to get vectors from namespace using a generic query for debugging
-      const debugQuery = 'document' // Generic query to check if namespace has any content
-      const debugEmbedding = await pineconeService.createEmbeddings(debugQuery)
-      if (debugEmbedding.success && debugEmbedding.embeddings) {
-        const allVectors = await pineconeService.searchSimilarWithEmbeddings(
-          debugEmbedding.embeddings,
-          namespace,
-          100 // Get more results for debugging
-        )
-        console.log(`📋 Total vectors found in namespace: ${allVectors.results?.length || 0}`)
-      }
-    }
 
     // Extract context from search results
     const context = searchResult.results
@@ -206,7 +259,7 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('❌ Unexpected error in public chat:', error)
+    console.error('❌ Unexpected error in unified chat:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -214,7 +267,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// Get chat history
+// Get chat history - handles both public and internal
 export async function GET(request: NextRequest) {
   console.log('📜 Get chat history API called')
   
@@ -230,8 +283,56 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    const supabase = await createClient()
-    
+    // First, check chatbot type
+    const publicSupabase = await createPublicClient()
+    const { data: chatbotInfo, error: infoError } = await publicSupabase
+      .from(TableName.CHATBOTS)
+      .select('type, company_id')
+      .eq('id', chatbotId)
+      .single()
+
+    if (infoError || !chatbotInfo) {
+      console.error('❌ Chatbot not found:', infoError)
+      return NextResponse.json(
+        { error: 'Chatbot not found' },
+        { status: 404 }
+      )
+    }
+
+    let supabase: any
+
+    if (chatbotInfo.type === 'internal') {
+      // Internal chatbot - verify authentication
+      const authSupabase = await createClient()
+      const { data: { user }, error: authError } = await authSupabase.auth.getUser()
+      
+      if (authError || !user) {
+        return NextResponse.json(
+          { error: 'Authentication required' },
+          { status: 401 }
+        )
+      }
+
+      // Verify user has access to this chatbot's company
+      const { data: userProfile } = await authSupabase
+        .from(TableName.USERS)
+        .select('company_id, role')
+        .eq('id', user.id)
+        .single()
+
+      if (!userProfile || userProfile.company_id !== chatbotInfo.company_id) {
+        return NextResponse.json(
+          { error: 'Access denied' },
+          { status: 403 }
+        )
+      }
+
+      supabase = authSupabase
+    } else {
+      // Public chatbot
+      supabase = publicSupabase
+    }
+
     // Get chat messages
     const { data: messages, error } = await supabase
       .from(TableName.CHAT_MESSAGES)

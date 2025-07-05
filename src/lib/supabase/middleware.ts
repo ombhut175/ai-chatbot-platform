@@ -48,9 +48,14 @@ export async function updateSession(request: NextRequest) {
   const isInternalChatRoute = internalChatRoutes.some(route => 
     request.nextUrl.pathname.startsWith(route)
   )
+  
+  // Internal API routes require authentication and role/company checks
+  const isInternalApiRoute = request.nextUrl.pathname.startsWith('/api/chatbots') && 
+     !request.nextUrl.pathname.startsWith('/api/chatbots/public') &&
+     !request.nextUrl.pathname.startsWith('/api/chatbots/details')
 
   // Only redirect to login if user is trying to access protected routes without authentication
-  if (!user && (isProtectedRoute || isInternalChatRoute)) {
+  if (!user && (isProtectedRoute || isInternalChatRoute || isInternalApiRoute)) {
     const url = request.nextUrl.clone()
     url.pathname = AppRoute.LOGIN
     url.searchParams.set('redirect', request.nextUrl.pathname)

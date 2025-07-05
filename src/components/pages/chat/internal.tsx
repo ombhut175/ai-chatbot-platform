@@ -1,51 +1,103 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Shield, Lock, Users, AlertTriangle, MessageSquare, Clock } from "lucide-react"
-import { useSearchParams } from "next/navigation"
+import { Shield, Lock, Users, AlertTriangle, MessageSquare, Clock, Loader2 } from "lucide-react"
+import { useSearchParams, useRouter } from "next/navigation"
 import { ChatWidget } from "@/components/chat/chat-widget"
 import { AnimatedCard } from "@/components/ui/animated-card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { useAppStore } from "@/lib/store"
+import { createClient } from "@/lib/supabase/client"
+import { apiRequest } from "@/helpers/request"
 
 export default function InternalChatPage() {
   const searchParams = useSearchParams()
-  const botId = searchParams?.get("bot") ?? ""
-  const { chatbots } = useAppStore()
+  const router = useRouter()
+  const botId = searchParams?.get("chatbotId") ?? ""
   const [isAuthenticated, setIsAuthenticated] = useState(false)
-  const [userRole, setUserRole] = useState<"admin" | "staff" | "viewer">("staff")
+  const [isLoading, setIsLoading] = useState(true)
+  const [user, setUser] = useState<any>(null)
+  const [chatbot, setChatbot] = useState<any>(null)
+  const [error, setError] = useState<string | null>(null)
   
-  // Find the chatbot
-  const chatbot = chatbots.find(bot => bot.id === botId)
-
-  // Simulate authentication check
+  // Check authentication and load chatbot
   useEffect(() => {
-    // In a real app, this would check actual authentication
-    const mockAuth = () => {
-      // Simulate a delay for auth check
-      setTimeout(() => {
+    const checkAuthAndLoadChatbot = async () => {
+      setIsLoading(true)
+      
+      try {
+        // Check authentication
+        const supabase = createClient()
+        const { data: { user }, error: authError } = await supabase.auth.getUser()
+        
+        if (authError || !user) {
+          setIsAuthenticated(false)
+          setIsLoading(false)
+          return
+        }
+        
+        setUser(user)
         setIsAuthenticated(true)
-        setUserRole("staff") // Mock role assignment
-      }, 1000)
+        
+        // Load chatbot details
+        if (botId) {
+          try {
+            console.log('Loading chatbot with ID:', botId)
+            const response = await apiRequest.get(`/api/chatbots/details/${botId}`)
+            console.log('Chatbot response:', response)
+            if (response) {
+              setChatbot(response)
+            } else {
+              setError("Chatbot not found")
+            }
+          } catch (error: any) {
+            console.error('Failed to load chatbot:', error)
+            console.error('Error response:', error?.response)
+            const errorMessage = error?.response?.data?.error || error?.message || "Failed to load chatbot"
+            setError(errorMessage)
+          }
+        } else {
+          console.log('No botId provided')
+          setError("No chatbot ID provided")
+        }
+      } catch (err) {
+        console.error("Error checking auth or loading chatbot:", err)
+        setError("Failed to load chatbot")
+      } finally {
+        setIsLoading(false)
+      }
     }
     
-    mockAuth()
-  }, [])
+    checkAuthAndLoadChatbot()
+  }, [botId])
 
-  // Mock login function
+  // Handle login
   const handleLogin = () => {
-    setIsAuthenticated(true)
+    router.push("/auth/login?redirect=/chat/internal?chatbotId=" + botId)
   }
 
-  if (!chatbot) {
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background via-background to-blue/5 flex items-center justify-center p-4">
+        <AnimatedCard className="p-12 text-center max-w-md" glow>
+          <Loader2 className="h-16 w-16 animate-spin mx-auto mb-6 text-blue-600" />
+          <h1 className="text-2xl font-bold mb-4">Loading...</h1>
+          <p className="text-muted-foreground">
+            Checking authentication and loading chatbot...
+          </p>
+        </AnimatedCard>
+      </div>
+    )
+  }
+
+  if (error || !chatbot) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-background via-background to-destructive/5 flex items-center justify-center p-4">
         <AnimatedCard className="p-12 text-center max-w-md" glow>
           <AlertTriangle className="h-16 w-16 text-destructive mx-auto mb-6" />
           <h1 className="text-2xl font-bold mb-4">Chatbot Not Found</h1>
           <p className="text-muted-foreground">
-            The requested internal chatbot could not be found or may have been removed.
+            {error || "The requested internal chatbot could not be found or may have been removed."}
           </p>
         </AnimatedCard>
       </div>
@@ -138,7 +190,7 @@ export default function InternalChatPage() {
               </Badge>
               <Badge variant="outline" className="flex items-center gap-1">
                 <Users className="h-3 w-3" />
-                {userRole.charAt(0).toUpperCase() + userRole.slice(1)}
+                {user?.email || "Employee"}
               </Badge>
             </div>
           </div>
