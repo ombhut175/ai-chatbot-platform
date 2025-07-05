@@ -343,6 +343,35 @@ export class PineconeService {
   }
 
   /**
+   * Search for similar documents with pre-computed embeddings
+   */
+  async searchSimilarWithEmbeddings(
+    embeddings: number[],
+    namespace: string,
+    topK: number = 10,
+    filter?: any
+  ): Promise<{ success: boolean; results?: any[]; error?: string }> {
+    try {
+      const index = this.pinecone.index(this.indexName)
+
+      console.log(`🔍 Searching in namespace "${namespace}" with topK=${topK} using provided embeddings`)
+      const searchResult = await index.namespace(namespace).query({
+        vector: embeddings,
+        topK,
+        includeMetadata: true,
+        filter
+      })
+
+      console.log(`✅ Search completed. Found ${searchResult.matches?.length || 0} matches`)
+      return { success: true, results: searchResult.matches }
+    } catch (error) {
+      console.error('Search error:', error)
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      return { success: false, error: `Failed to search documents: ${errorMessage}` }
+    }
+  }
+
+  /**
    * Search for similar documents
    */
   async searchSimilar(
@@ -371,17 +400,8 @@ export class PineconeService {
 
       console.log(`✅ Query embedding created with ${embeddingResult.embeddings.length} dimensions`)
 
-      // Search in Pinecone
-      console.log(`🔍 Searching in namespace "${namespace}" with topK=${topK}`)
-      const searchResult = await index.namespace(namespace).query({
-        vector: embeddingResult.embeddings,
-        topK,
-        includeMetadata: true,
-        filter
-      })
-
-      console.log(`✅ Search completed. Found ${searchResult.matches?.length || 0} matches`)
-      return { success: true, results: searchResult.matches }
+      // Use the new function with embeddings
+      return this.searchSimilarWithEmbeddings(embeddingResult.embeddings, namespace, topK, filter)
     } catch (error) {
       console.error('Search error:', error)
       const errorMessage = error instanceof Error ? error.message : 'Unknown error'

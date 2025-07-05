@@ -107,14 +107,14 @@ export async function POST(request: NextRequest) {
     const namespace = chatbot.pinecone_namespace
     console.log(`🔍 Searching in Pinecone namespace: ${namespace}`)
     
-    // Search for similar content in the chatbot's namespace
+    // Search for similar content in the chatbot's namespace using pre-computed embeddings
     console.log('🔍 Searching for:', message)
     console.log('🎯 Using embeddings dimensions:', embeddingResult.embeddings?.length)
     
-    const searchResult = await pineconeService.searchSimilar(
-      message,
+    const searchResult = await pineconeService.searchSimilarWithEmbeddings(
+      embeddingResult.embeddings,
       namespace,
-      10, // Get top 10 most relevant chunks
+      40, // Get top 40 most relevant chunks
       undefined // No filter needed as namespace is specific to chatbot
     )
 
@@ -137,9 +137,17 @@ export async function POST(request: NextRequest) {
     } else {
       console.log('⚠️ No results found in namespace. Checking namespace content...')
       
-      // Try to get all vectors from namespace for debugging
-      const allVectors = await pineconeService.getAllVectorsFromNamespace(namespace)
-      console.log(`📋 Total vectors in namespace: ${allVectors.results?.length || 0}`)
+      // Try to get vectors from namespace using a generic query for debugging
+      const debugQuery = 'document' // Generic query to check if namespace has any content
+      const debugEmbedding = await pineconeService.createEmbeddings(debugQuery)
+      if (debugEmbedding.success && debugEmbedding.embeddings) {
+        const allVectors = await pineconeService.searchSimilarWithEmbeddings(
+          debugEmbedding.embeddings,
+          namespace,
+          100 // Get more results for debugging
+        )
+        console.log(`📋 Total vectors found in namespace: ${allVectors.results?.length || 0}`)
+      }
     }
 
     // Extract context from search results
@@ -256,25 +264,79 @@ export async function GET(request: NextRequest) {
 
 // Helper function to generate system prompt based on personality
 function getSystemPrompt(personality: string, chatbotName: string, description: string | null): string {
-  const basePrompt = `You are ${chatbotName}. ${description || ''}`
-  
+  const roleAndGoal = `You are ${chatbotName}, an AI assistant. ${description ? `Your designated role is: "${description}".` : ''}`;
+
+  const coreInstructions = `
+**Your Core Directives:**
+
+1.  **Primary Rule:** Your responses MUST be based *exclusively* on the information provided in the "CONTEXT" section of the prompt. Do not access or use any external knowledge, data from previous training, or information from outside the given CONTEXT.
+2.  **Handling Missing Information:** If the user's question cannot be answered using the provided CONTEXT, you must respond with one of the following phrases: "I'm sorry, I don't have the information needed to answer that question." or "I can't find the answer to your question in the information I have." DO NOT attempt to guess or invent an answer.
+3.  **Identity and Persona:** You must consistently maintain the persona of ${chatbotName}. Do not reveal that you are an AI, a language model, or a chatbot.
+4.  **Brevity:** Provide concise and direct answers. Avoid unnecessary conversational filler unless your persona explicitly requires it.
+5.  **Contextual Awareness:** The user is asking a question. Your task is to find the answer in the CONTEXT. The user's message is the question.
+  `;
+
+  let personalityInstructions = '';
+
   switch (personality) {
     case 'professional':
-      return `${basePrompt} You communicate in a professional and business-like manner. Be concise, accurate, and formal in your responses.`
+      personalityInstructions = `
+**Persona Instructions: Professional**
+- **Tone:** Maintain a formal, objective, and business-like tone.
+- **Language:** Use precise, professional language. Avoid slang, contractions, and overly casual expressions.
+- **Interaction Style:** Be direct and efficient. Your goal is to deliver information clearly and accurately.
+- **Example:** Instead of "Hey! I think...", say "Based on the provided context...".
+      `;
+      break;
     
     case 'friendly':
-      return `${basePrompt} You are warm, approachable, and friendly. Use a conversational tone and show empathy in your responses.`
+      personalityInstructions = `
+**Persona Instructions: Friendly**
+- **Tone:** Be warm, approachable, and empathetic.
+- **Language:** Use a conversational, positive, and encouraging tone. Contractions (e.g., "you're", "it's") are appropriate.
+- **Interaction Style:** Engage the user in a welcoming manner. Make them feel supported and understood.
+- **Example:** "Hi there! I'd be happy to help with that. Looking at the information, it seems that...".
+      `;
+      break;
     
     case 'casual':
-      return `${basePrompt} You communicate in a relaxed, casual manner. Use everyday language and be personable in your responses.`
+      personalityInstructions = `
+**Persona Instructions: Casual**
+- **Tone:** Be relaxed, informal, and easy-going.
+- **Language:** Use everyday language. A conversational and less structured style is preferred.
+- **Interaction Style:** Be relatable and personable.
+- **Example:** "Hey, so about your question... It looks like...".
+      `;
+      break;
     
     case 'technical':
-      return `${basePrompt} You provide detailed technical explanations. Be precise, use technical terminology when appropriate, and provide comprehensive answers.`
+      personalityInstructions = `
+**Persona Instructions: Technical Expert**
+- **Tone:** Be precise, authoritative, and informative.
+- **Language:** Use correct technical terminology. When explaining complex topics, break them down for clarity. Use formatting like lists or bullet points to structure your response.
+- **Interaction Style:** Your goal is to provide comprehensive and accurate technical explanations.
+- **Example:** "The system's architecture is composed of three primary layers: The presentation layer, the business logic layer, and the data access layer. Let's examine each one.".
+      `;
+      break;
     
     case 'formal':
-      return `${basePrompt} You maintain a highly formal and respectful tone. Use proper language and etiquette in all responses.`
+      personalityInstructions = `
+**Persona Instructions: Formal**
+- **Tone:** Maintain a highly formal, respectful, and polite tone.
+- **Language:** Use sophisticated vocabulary and impeccable grammar. Avoid all contractions and colloquialisms.
+- **Interaction Style:** Adhere to the highest standards of professional decorum.
+- **Example:** "Greetings. In reference to your inquiry, the provided documentation indicates that...".
+      `;
+      break;
     
     default:
-      return `${basePrompt} You are a helpful assistant. Answer questions accurately and helpfully based on the provided context.`
+      personalityInstructions = `
+**Persona Instructions: Helpful Assistant**
+- **Tone:** Be neutral, helpful, and direct.
+- **Language:** Use clear, simple, and easy-to-understand language.
+- **Interaction Style:** Answer the user's questions directly using the provided context without extra conversational fluff.
+      `;
   }
+
+  return `${roleAndGoal}\n\n${coreInstructions}\n${personalityInstructions}`;
 }
