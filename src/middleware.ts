@@ -10,6 +10,7 @@ export const config = {
     /*
      * Match all request paths except for the ones starting with:
      * - api/chat (unified chat API - handles both public and internal)
+     * - api/chat/public (public chat API with API key auth)
      * - api/chatbots/public (public chatbot data API)
      * - api/chatbots/details (chatbot details API - public accessible)
      * - chat (unified chat page - handles auth internally)
@@ -20,6 +21,6 @@ export const config = {
      * - favicon.ico (favicon file)
      * - and other static assets
      */
-    '/((?!api/chat|api/chatbots/public/.*|api/chatbots/details/.*|chat(?!/internal)|widget\\.js|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!api/chat|api/chat/public|api/chatbots/public/.*|api/chatbots/details/.*|chat(?!/internal)|widget\.js|_next/static|_next/image|favicon.ico|.*\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 }

@@ -1,6 +1,8 @@
 import useSWR from 'swr'
 import { apiRequest } from '@/helpers/request'
 import { usePublicChatStore } from '@/store/publicChatStore'
+import { type Chatbot } from '@/lib/types'
+import { ChatbotPersonality } from '@/helpers/string_const/chatbot'
 
 interface Message {
   id: string
@@ -24,6 +26,7 @@ interface ChatbotDetails {
     backgroundColor: string
     textColor: string
   } | null
+  type: 'public' | 'internal'
 }
 
 interface SendMessageResponse {
@@ -33,9 +36,19 @@ interface SendMessageResponse {
 }
 
 // Fetcher for chatbot details
-const chatbotFetcher = async (url: string): Promise<ChatbotDetails> => {
+const chatbotFetcher = async (url: string): Promise<Chatbot> => {
   const response = await apiRequest.get<ChatbotDetails>(url)
-  return response
+  // We need to augment the public details with default values to satisfy the full Chatbot type
+  return {
+    ...response,
+    personality: ChatbotPersonality.FRIENDLY,
+    is_active: true, // Public details are only returned for active chatbots
+    status: 'ready',
+    company_id: '', // Not relevant for public chat
+    pinecone_namespace: null,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  }
 }
 
 // Fetcher for chat history
@@ -45,12 +58,12 @@ const chatHistoryFetcher = async (url: string): Promise<Message[]> => {
 }
 
 // Hook to fetch chatbot details - DEPRECATED: Use direct fetch in component for public access
-// The /api/chatbots/[id] endpoint requires authentication which public chat doesn't have
+// The /api/chatbots/[chatbotId] endpoint requires authentication which public chat doesn't have
 export const useChatbot = (chatbotId: string | null) => {
   const { setChatbot, setError } = usePublicChatStore()
   
   const { data, error, isLoading, mutate } = useSWR(
-    chatbotId ? `/api/chatbots/${chatbotId}` : null,
+    chatbotId ? `/api/chatbots/details/${chatbotId}` : null,
     chatbotFetcher,
     {
       revalidateOnFocus: false,

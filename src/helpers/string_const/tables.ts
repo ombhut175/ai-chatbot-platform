@@ -8,4 +8,5 @@ export const TableName = {
   INTEGRATIONS: 'integrations',
   CHAT_SESSIONS: 'chat_sessions',
   CHAT_MESSAGES: 'chat_messages',
-}; 
+  API_KEYS: 'api_keys',
+};

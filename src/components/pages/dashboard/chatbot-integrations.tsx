@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from "react"
 import { useParams, useRouter } from "next/navigation"
-import { Copy, RefreshCw, Eye, ArrowLeft, Loader2, ExternalLink, X } from "lucide-react"
+import { Copy, RefreshCw, Eye, ArrowLeft, Loader2, ExternalLink, X, Key, Trash2, Plus, CheckCircle2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -13,6 +13,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/hooks/use-toast"
 import { useChatbot } from "@/hooks/use-chatbots"
+import { useApiKeys } from "@/hooks/use-api-keys"
 import { AnimatedCard } from "@/components/ui/animated-card"
 import Link from "next/link"
 import {
@@ -22,6 +23,17 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import { format } from "date-fns"
 
 // Type declaration for the widget API
 declare global {
@@ -52,10 +64,16 @@ export default function ChatbotIntegrationsPage() {
     size: "medium",
     theme: "light",
   })
-  const [apiKey] = useState("YOUR_API_KEY_HERE") // TODO: Fetch from backend
   const [showIframePreview, setShowIframePreview] = useState(false)
   const [showWidgetPreview, setShowWidgetPreview] = useState(false)
-  const [isApiKeyVisible, setIsApiKeyVisible] = useState(false)
+  const [showNewApiKeyModal, setShowNewApiKeyModal] = useState(false)
+  const [newApiKey, setNewApiKey] = useState<string | null>(null)
+  const [keyToRevoke, setKeyToRevoke] = useState<string | null>(null)
+  const [isCreatingKey, setIsCreatingKey] = useState(false)
+  const [selectedApiKeyForExample, setSelectedApiKeyForExample] = useState<string>("")
+  
+  // Use the API keys hook
+  const { apiKeys, isLoading: isLoadingKeys, error: apiKeysError, createApiKey, revokeApiKey } = useApiKeys(chatbotId)
 
   // Cleanup on unmount
   useEffect(() => {
@@ -114,19 +132,25 @@ export default function ChatbotIntegrationsPage() {
 ></iframe>`
   }, [chatbotId])
 
-  const generateApiExample = useMemo(() => {
-    const sanitizedChatbotId = chatbotId?.replace(/[^a-zA-Z0-9-_]/g, '') || 'YOUR_CHATBOT_ID'
-    const displayApiKey = isApiKeyVisible ? apiKey : 'YOUR_API_KEY_HERE'
+  const generateApiExample = useCallback(() => {
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || window.location.origin
     
-    return `curl -X POST https://api.yourplatform.com/v1/chat \\
+    // Use the selected API key, or the first active API key, or placeholder
+    let displayApiKey = selectedApiKeyForExample
+    if (!displayApiKey && apiKeys.length > 0) {
+      const activeKey = apiKeys.find(key => key.is_active)
+      displayApiKey = activeKey ? activeKey.key_preview : 'YOUR_API_KEY'
+    }
+    displayApiKey = displayApiKey || 'YOUR_API_KEY'
+    
+    return `curl -X POST ${appUrl}/api/chat/public \\
   -H "Authorization: Bearer ${displayApiKey}" \\
   -H "Content-Type: application/json" \\
   -d '{
-    "chatbot_id": "${sanitizedChatbotId}",
     "message": "Hello, how can you help me?",
-    "session_id": "user-session-123"
+    "sessionId": "user-session-123"
   }'`
-  }, [chatbotId, isApiKeyVisible, apiKey])
+  }, [apiKeys, selectedApiKeyForExample])
 
   const copyToClipboard = useCallback(async (text: string, type: string) => {
     try {
@@ -144,14 +168,48 @@ export default function ChatbotIntegrationsPage() {
     }
   }, [toast])
 
-  const regenerateApiKey = useCallback(() => {
-    // TODO: Implement actual API key regeneration
-    toast({
-      title: "Feature Coming Soon",
-      description: "API key regeneration will be available in the next update",
-      variant: "default",
-    })
-  }, [toast])
+  const handleCreateApiKey = useCallback(async () => {
+    setIsCreatingKey(true)
+    setNewApiKey(null)
+    
+    const apiKey = await createApiKey()
+    
+    if (apiKey) {
+      setNewApiKey(apiKey)
+      setShowNewApiKeyModal(true)
+      toast({
+        title: "API Key Created",
+        description: "Your new API key has been generated successfully.",
+      })
+    } else {
+      toast({
+        title: "Failed to create API key",
+        description: apiKeysError || "Please try again later.",
+        variant: "destructive",
+      })
+    }
+    
+    setIsCreatingKey(false)
+  }, [createApiKey, apiKeysError, toast])
+  
+  const handleRevokeApiKey = useCallback(async (keyId: string) => {
+    const success = await revokeApiKey(keyId)
+    
+    if (success) {
+      toast({
+        title: "API Key Revoked",
+        description: "The API key has been successfully revoked.",
+      })
+    } else {
+      toast({
+        title: "Failed to revoke API key",
+        description: apiKeysError || "Please try again later.",
+        variant: "destructive",
+      })
+    }
+    
+    setKeyToRevoke(null)
+  }, [revokeApiKey, apiKeysError, toast])
 
   if (isLoading) {
     return (
@@ -370,34 +428,76 @@ export default function ChatbotIntegrationsPage() {
             <div className="space-y-4">
               <AnimatedCard>
                 <CardHeader>
-                  <CardTitle>API Key</CardTitle>
-                  <CardDescription>Use this key to authenticate API requests</CardDescription>
+                  <CardTitle>API Keys</CardTitle>
+                  <CardDescription>Manage API keys for programmatic access to your chatbot</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="flex space-x-2">
-                    <input
-                      type={isApiKeyVisible ? "text" : "password"}
-                      value={apiKey}
-                      readOnly
-                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm font-mono"
-                    />
-                    <Button 
-                      variant="outline" 
-                      onClick={() => setIsApiKeyVisible(!isApiKeyVisible)}
-                      title={isApiKeyVisible ? "Hide API Key" : "Show API Key"}
-                    >
-                      <Eye className="h-4 w-4" />
-                    </Button>
-                    <Button variant="outline" onClick={() => copyToClipboard(apiKey, "API Key")}>
-                      <Copy className="h-4 w-4" />
-                    </Button>
-                    <Button variant="outline" onClick={regenerateApiKey}>
-                      <RefreshCw className="h-4 w-4" />
+                  <div className="flex justify-between items-center mb-4">
+                    <p className="text-sm text-muted-foreground">
+                      {apiKeys.length === 0 ? "No API keys created yet" : `${apiKeys.length} API key${apiKeys.length === 1 ? '' : 's'} created`}
+                    </p>
+                    <Button onClick={handleCreateApiKey} disabled={isCreatingKey}>
+                      {isCreatingKey ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : (
+                        <Plus className="mr-2 h-4 w-4" />
+                      )}
+                      Generate New API Key
                     </Button>
                   </div>
-                  <p className="text-sm text-muted-foreground">
-                    Keep your API key secure and don't share it publicly
-                  </p>
+                  
+                  {isLoadingKeys ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                    </div>
+                  ) : apiKeys.length > 0 ? (
+                    <div className="space-y-2">
+                      {apiKeys.map((key) => (
+                        <div key={key.id} className="flex items-center justify-between p-3 border rounded-lg">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <code className="text-sm font-mono">{key.key_preview}</code>
+                              <Badge variant={key.is_active ? "default" : "secondary"}>
+                                {key.is_active ? "Active" : "Revoked"}
+                              </Badge>
+                            </div>
+                            <div className="flex items-center gap-4 mt-1">
+                              <span className="text-xs text-muted-foreground">
+                                Created: {format(new Date(key.created_at), 'MMM d, yyyy HH:mm')}
+                              </span>
+                              {key.last_used_at && (
+                                <span className="text-xs text-muted-foreground">
+                                  Last used: {format(new Date(key.last_used_at), 'MMM d, yyyy HH:mm')}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          {key.is_active && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setKeyToRevoke(key.id)}
+                              title="Revoke API Key"
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <Key className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                      <p>No API keys yet. Create one to get started.</p>
+                    </div>
+                  )}
+                  
+                  <div className="mt-4 p-3 bg-muted rounded-lg">
+                    <p className="text-sm font-medium mb-1">⚠️ Security Note:</p>
+                    <p className="text-sm text-muted-foreground">
+                      Keep your API keys secure and never share them publicly. If a key is compromised, revoke it immediately.
+                    </p>
+                  </div>
                 </CardContent>
               </AnimatedCard>
 
@@ -407,45 +507,134 @@ export default function ChatbotIntegrationsPage() {
                   <CardDescription>Example cURL request to send a message</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <Textarea value={generateApiExample} readOnly rows={8} className="font-mono text-sm" />
-                  <Button onClick={() => copyToClipboard(generateApiExample, "API Example")} className="w-full">
-                    <Copy className="mr-2 h-4 w-4" />
-                    Copy API Example
-                  </Button>
+                  {apiKeys.length > 0 && (
+                    <div className="space-y-2">
+                      <Label htmlFor="api-key-select">API Key for Example</Label>
+                      <Select
+                        value={selectedApiKeyForExample}
+                        onValueChange={setSelectedApiKeyForExample}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select an API key" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="">Use placeholder key</SelectItem>
+                          {apiKeys
+                            .filter(key => key.is_active)
+                            .map((key) => (
+                              <SelectItem key={key.id} value={key.key_preview}>
+                                {key.key_preview} {key.last_used_at && (
+                                  <span className="text-xs text-muted-foreground ml-2">
+                                    (Last used: {format(new Date(key.last_used_at), 'MMM d')})
+                                  </span>
+                                )}
+                              </SelectItem>
+                            ))
+                          }
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                  <Textarea value={generateApiExample()} readOnly rows={8} className="font-mono text-sm" />
+                  <div className="flex gap-2">
+                    <Button onClick={() => copyToClipboard(generateApiExample(), "API Example")} className="flex-1">
+                      <Copy className="mr-2 h-4 w-4" />
+                      Copy API Example
+                    </Button>
+                    {apiKeys.length === 0 && (
+                      <p className="text-sm text-muted-foreground self-center">
+                        Create an API key to see a real example
+                      </p>
+                    )}
+                  </div>
+                  {selectedApiKeyForExample && (
+                    <div className="p-3 bg-blue-50 dark:bg-blue-950 rounded-lg">
+                      <p className="text-sm text-blue-900 dark:text-blue-100">
+                        💡 This example uses your actual API key. Copy it to test with your chatbot immediately!
+                      </p>
+                    </div>
+                  )}
                 </CardContent>
               </AnimatedCard>
 
               <AnimatedCard>
                 <CardHeader>
                   <CardTitle>API Documentation</CardTitle>
-                  <CardDescription>Available endpoints and parameters</CardDescription>
+                  <CardDescription>Complete guide for using the Chat API</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-4">
-                    <div className="border rounded-lg p-4">
-                      <div className="flex items-center space-x-2 mb-2">
-                        <Badge>POST</Badge>
-                        <code className="text-sm">/v1/chat</code>
+                  <div className="space-y-6">
+                    <div>
+                      <h4 className="font-semibold mb-2">Endpoint</h4>
+                      <div className="border rounded-lg p-4">
+                        <div className="flex items-center space-x-2 mb-2">
+                          <Badge>POST</Badge>
+                          <code className="text-sm">{process.env.NEXT_PUBLIC_APP_URL || window.location.origin}/api/chat/public</code>
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          Send a message to the chatbot and receive a response
+                        </p>
                       </div>
-                      <p className="text-sm text-muted-foreground">
-                        Send a message to the chatbot and receive a response
+                    </div>
+                    
+                    <div>
+                      <h4 className="font-semibold mb-2">Authentication</h4>
+                      <p className="text-sm text-muted-foreground mb-2">
+                        Include your API key in the Authorization header:
                       </p>
+                      <code className="text-sm bg-muted p-2 rounded block">
+                        Authorization: Bearer YOUR_API_KEY
+                      </code>
                     </div>
-
-                    <div className="border rounded-lg p-4">
-                      <div className="flex items-center space-x-2 mb-2">
-                        <Badge variant="secondary">GET</Badge>
-                        <code className="text-sm">/v1/chatbots/{chatbotId}</code>
+                    
+                    <div>
+                      <h4 className="font-semibold mb-2">Request Body</h4>
+                      <div className="border rounded-lg p-4">
+                        <pre className="text-sm">
+{`{
+  "message": "string (required)",
+  "sessionId": "string (optional)"
+}`}
+                        </pre>
                       </div>
-                      <p className="text-sm text-muted-foreground">Get details about a specific chatbot</p>
                     </div>
-
-                    <div className="border rounded-lg p-4">
-                      <div className="flex items-center space-x-2 mb-2">
-                        <Badge variant="secondary">GET</Badge>
-                        <code className="text-sm">/v1/conversations</code>
+                    
+                    <div>
+                      <h4 className="font-semibold mb-2">Response</h4>
+                      <div className="border rounded-lg p-4">
+                        <pre className="text-sm">
+{`{
+  "success": true,
+  "data": {
+    "response": "string",
+    "sessionId": "string",
+    "timestamp": "ISO 8601 datetime"
+  }
+}`}
+                        </pre>
                       </div>
-                      <p className="text-sm text-muted-foreground">Retrieve conversation history and analytics</p>
+                    </div>
+                    
+                    <div>
+                      <h4 className="font-semibold mb-2">Error Responses</h4>
+                      <div className="space-y-2">
+                        <div className="text-sm">
+                          <Badge variant="destructive" className="mr-2">401</Badge>
+                          <span className="text-muted-foreground">Invalid or missing API key</span>
+                        </div>
+                        <div className="text-sm">
+                          <Badge variant="destructive" className="mr-2">400</Badge>
+                          <span className="text-muted-foreground">Invalid request body</span>
+                        </div>
+                        <div className="text-sm">
+                          <Badge variant="destructive" className="mr-2">404</Badge>
+                          <span className="text-muted-foreground">Chatbot not found or inactive</span>
+                        </div>
+                        <div className="text-sm">
+                          <Badge variant="destructive" className="mr-2">500</Badge>
+                          <span className="text-muted-foreground">Internal server error</span>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </CardContent>
@@ -578,6 +767,73 @@ export default function ChatbotIntegrationsPage() {
           </div>
         </DialogContent>
       </Dialog>
+      
+      {/* New API Key Modal */}
+      <Dialog open={showNewApiKeyModal} onOpenChange={setShowNewApiKeyModal}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>New API Key Created</DialogTitle>
+            <DialogDescription>
+              Make sure to copy your API key now. You won't be able to see it again!
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="p-4 bg-muted rounded-lg">
+              <code className="text-sm font-mono break-all">{newApiKey}</code>
+            </div>
+            <div className="flex gap-2">
+              <Button 
+                onClick={() => {
+                  if (newApiKey) {
+                    copyToClipboard(newApiKey, "API Key")
+                  }
+                }}
+                className="flex-1"
+              >
+                <Copy className="mr-2 h-4 w-4" />
+                Copy API Key
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  setShowNewApiKeyModal(false)
+                  setNewApiKey(null)
+                }}
+              >
+                Close
+              </Button>
+            </div>
+            <div className="flex items-start gap-2 p-3 bg-amber-50 dark:bg-amber-950 rounded-lg">
+              <CheckCircle2 className="h-5 w-5 text-amber-600 mt-0.5" />
+              <div className="text-sm text-amber-900 dark:text-amber-100">
+                <p className="font-semibold mb-1">Important:</p>
+                <p>Store this API key securely. It provides full access to your chatbot.</p>
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Revoke API Key Confirmation */}
+      <AlertDialog open={!!keyToRevoke} onOpenChange={(open) => !open && setKeyToRevoke(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Revoke API Key?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. Applications using this API key will immediately lose access.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => keyToRevoke && handleRevokeApiKey(keyToRevoke)}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Revoke Key
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

@@ -109,7 +109,7 @@ export function useUpdateChatbot() {
   const { userProfile } = useAuthStore()
 
   const updateChatbot = useCallback(async (
-    id: string,
+    chatbotId: string,
     updates: UpdateChatbotData & { data_source_ids?: string[] }
   ): Promise<{ success: boolean; data?: Chatbot; error?: string }> => {
     if (!userProfile?.company_id) {
@@ -117,9 +117,9 @@ export function useUpdateChatbot() {
     }
 
     try {
-      console.log('📝 Updating chatbot:', id, updates)
+      console.log('📝 Updating chatbot:', chatbotId, updates)
 
-      const result = await apiRequest.put<Chatbot>(`/api/chatbots/${id}`, updates)
+      const result = await apiRequest.put<Chatbot>(`/api/chatbots/${chatbotId}`, updates)
 
       if (result) {
         console.log('✅ Chatbot updated successfully:', result)
@@ -160,15 +160,15 @@ export function useUpdateChatbot() {
 export function useDeleteChatbot() {
   const { userProfile } = useAuthStore()
 
-  const deleteChatbot = useCallback(async (id: string): Promise<{ success: boolean; error?: string }> => {
+  const deleteChatbot = useCallback(async (chatbotId: string): Promise<{ success: boolean; error?: string }> => {
     if (!userProfile?.company_id) {
       return { success: false, error: 'User not associated with a company' }
     }
 
     try {
-      console.log('🗑️ Deleting chatbot:', id)
+      console.log('🗑️ Deleting chatbot:', chatbotId)
 
-      await apiRequest.delete(`/api/chatbots/${id}`)
+      await apiRequest.delete(`/api/chatbots/${chatbotId}`)
       
       console.log('✅ Chatbot deleted successfully')
       
@@ -202,13 +202,13 @@ export function useDeleteChatbot() {
 /**
  * Hook to get a single chatbot by ID
  */
-export function useChatbot(id: string) {
+export function useChatbot(chatbotId: string) {
   const { userProfile } = useAuthStore()
 
   const { data, error, isLoading, mutate: mutateChatbot } = useSWR(
-    userProfile?.company_id && id ? `/api/chatbots/${id}` : null,
+    userProfile?.company_id && chatbotId ? `/api/chatbots/${chatbotId}` : null,
     async () => {
-      const result = await apiRequest.get<Chatbot>(`/api/chatbots/${id}`)
+      const result = await apiRequest.get<Chatbot>(`/api/chatbots/${chatbotId}`)
       return result
     },
     {
@@ -232,9 +232,9 @@ export function useChatbot(id: string) {
 export function useToggleChatbotStatus() {
   const { updateChatbot } = useUpdateChatbot()
 
-  const toggleStatus = useCallback(async (id: string, currentStatus: boolean): Promise<{ success: boolean; error?: string }> => {
+  const toggleStatus = useCallback(async (chatbotId: string, currentStatus: boolean): Promise<{ success: boolean; error?: string }> => {
     try {
-      const result = await updateChatbot(id, { is_active: !currentStatus })
+      const result = await updateChatbot(chatbotId, { is_active: !currentStatus })
       
       if (result.success) {
         toast({
