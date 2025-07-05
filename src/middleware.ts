@@ -9,6 +9,7 @@ export const config = {
   matcher: [
     /*
      * Match all request paths except for the ones starting with:
+     * - api/inngest (Inngest webhook endpoint)
      * - api/chat (unified chat API - handles both public and internal)
      * - api/chat/public (public chat API with API key auth)
      * - api/chatbots/public (public chatbot data API)
@@ -21,6 +22,6 @@ export const config = {
      * - favicon.ico (favicon file)
      * - and other static assets
      */
-    '/((?!api/chat|api/chat/public|api/chatbots/public/.*|api/chatbots/details/.*|chat(?!/internal)|widget\.js|_next/static|_next/image|favicon.ico|.*\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!api/inngest|api/chat|api/chat/public|api/chatbots/public/.*|api/chatbots/details/.*|chat(?!/internal)|widget\.js|_next/static|_next/image|favicon.ico|.*\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 }
