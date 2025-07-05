@@ -110,8 +110,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [supabaseUser, pathname, initializing, router])
 
-  // Loading state
-  if (initializing) {
+  // Loading state - but don't show loading screen on auth pages
+  if (initializing && !authRoutes.includes(pathname)) {
     return (
       <div className="min-h-screen flex flex-col">
         <div className="flex-1 flex items-center justify-center">

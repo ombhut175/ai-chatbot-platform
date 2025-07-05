@@ -14,9 +14,10 @@ interface AuthState {
 export function useAuth() {
   const [authState, setAuthState] = useState<AuthState>({
     user: null,
-    loading: true,
+    loading: false,
     error: null,
   })
+  const [isInitializing, setIsInitializing] = useState(true)
   const router = useRouter()
   const pathname = usePathname()
   const supabase = createClient()
@@ -34,6 +35,7 @@ export function useAuth() {
       } else {
         setAuthState({ user: session?.user ?? null, loading: false, error: null })
       }
+      setIsInitializing(false)
     }
 
     getInitialSession()
@@ -111,6 +113,7 @@ export function useAuth() {
       return { success: false, error: error.message }
     }
 
+    setAuthState(prev => ({ ...prev, loading: false }))
     return { success: true, user: data.user }
   }
 

@@ -68,16 +68,29 @@ export function useApiKeys(chatbotId: string | null) {
     setError(null)
 
     try {
+      // Optimistically update the state immediately
+      setApiKeys(prevKeys => 
+        prevKeys.map(key => 
+          key.id === keyId ? { ...key, is_active: false } : key
+        )
+      )
+
       const response = await fetch(`/api/chatbots/${chatbotId}/api-keys/${keyId}`, {
         method: 'DELETE',
       })
 
       if (!response.ok) {
+        // Revert the optimistic update on error
+        setApiKeys(prevKeys => 
+          prevKeys.map(key => 
+            key.id === keyId ? { ...key, is_active: true } : key
+          )
+        )
         const data = await response.json()
         throw new Error(data.error || 'Failed to revoke API key')
       }
 
-      // Refresh the list after revoking
+      // Refresh the list to ensure consistency
       await fetchApiKeys()
 
       return true

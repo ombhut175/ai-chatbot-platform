@@ -23,19 +23,6 @@ export function StatsCard({ title, value, description, icon: Icon, trend, classN
           <p className="text-sm font-medium text-muted-foreground">{title}</p>
           <div className="flex items-baseline space-x-2">
             <p className="text-3xl font-bold tracking-tight">{value}</p>
-            {trend && (
-              <span
-                className={cn(
-                  "text-xs font-medium px-2 py-1 rounded-full",
-                  trend.isPositive
-                    ? "text-green-600 bg-green-100 dark:text-green-400 dark:bg-green-900/20"
-                    : "text-red-600 bg-red-100 dark:text-red-400 dark:bg-red-900/20",
-                )}
-              >
-                {trend.isPositive ? "+" : ""}
-                {trend.value}%
-              </span>
-            )}
           </div>
           <p className="text-sm text-muted-foreground">{description}</p>
         </div>

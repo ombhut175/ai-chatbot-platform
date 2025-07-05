@@ -7,6 +7,7 @@ export enum AppRoute {
   DASHBOARD_ANALYTICS = '/dashboard/analytics',
   DASHBOARD_CHATBOTS = '/dashboard/chatbots',
   DASHBOARD_DATA = '/dashboard/data',
+  DASHBOARD_INTEGRATIONS = '/dashboard/integrations',
   DASHBOARD_USERS = '/dashboard/users',
   DASHBOARD_PROFILE = '/dashboard/profile',
   DASHBOARD_SETTINGS = '/dashboard/settings',

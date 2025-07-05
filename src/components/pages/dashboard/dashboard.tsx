@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useMemo } from "react"
 import {
   Plus,
   Upload,
@@ -11,6 +11,7 @@ import {
   Zap,
   Users,
   Clock,
+  Loader2,
 } from "lucide-react"
 import Link from "next/link"
 import { AppRoute } from "@/helpers/string_const/routes"
@@ -18,114 +19,167 @@ import { AppRoute } from "@/helpers/string_const/routes"
 import { GradientButton } from "@/components/ui/gradient-button"
 import { AnimatedCard } from "@/components/ui/animated-card"
 import { StatsCard } from "@/components/ui/stats-card"
-import { useAuthStore, useAppStore } from "@/lib/store"
-import { mockChatbots, mockDataSources } from "@/lib/mock-data"
+import { useAuthStore } from "@/lib/store"
+import { useDashboardData } from "@/hooks/use-dashboard"
+import { useChatbots } from "@/hooks/use-chatbots"
 
-const statsData = [
-  {
-    title: "Total Chatbots",
-    value: "2",
-    description: "Active chatbots",
-    icon: Bot,
-    trend: { value: 12, isPositive: true },
-  },
-  {
-    title: "Data Sources",
-    value: "3",
-    description: "Connected sources",
-    icon: Database,
-    trend: { value: 8, isPositive: true },
-  },
-  {
-    title: "Messages Today",
-    value: "47",
-    description: "+12% from yesterday",
-    icon: MessageSquare,
-    trend: { value: 12, isPositive: true },
-  },
-  {
-    title: "Active Chats",
-    value: "3",
-    description: "Currently online",
-    icon: TrendingUp,
-    trend: { value: 5, isPositive: false },
-  },
-]
 
-const quickActions = [
-  {
-    title: "Upload Data Source",
-    description: "Add new knowledge to your chatbots",
-    icon: Upload,
-    color: "from-blue-500 to-blue-600",
-    href: AppRoute.DASHBOARD_DATA,
-  },
-  {
-    title: "Create New Chatbot",
-    description: "Build your next AI assistant",
-    icon: Bot,
-    color: "from-purple-500 to-purple-600",
-    href: AppRoute.DASHBOARD_CHATBOTS,
-  },
-  {
-    title: "Test Chat Interface",
-    description: "Try out your chatbots",
-    icon: MessageSquare,
-    color: "from-green-500 to-green-600",
-    href: AppRoute.CHAT + "?chatbotId=sample", // Will need actual chatbot ID
-  },
-  {
-    title: "View Analytics",
-    description: "Monitor performance metrics",
-    icon: TrendingUp,
-    color: "from-orange-500 to-orange-600",
-    href: AppRoute.DASHBOARD_ANALYTICS,
-  },
-]
 
-const recentActivity = [
-  {
-    id: "1",
-    action: "New chatbot created",
-    description: "Customer Support Bot was created",
-    time: "2 hours ago",
-    type: "success",
-    icon: Bot,
-  },
-  {
-    id: "2",
-    action: "Data source uploaded",
-    description: "Product Documentation.pdf was processed",
-    time: "4 hours ago",
-    type: "info",
-    icon: Upload,
-  },
-  {
-    id: "3",
-    action: "Integration activated",
-    description: "Website widget was embedded",
-    time: "1 day ago",
-    type: "success",
-    icon: Zap,
-  },
-  {
-    id: "4",
-    action: "User messages received",
-    description: "47 new messages from customers",
-    time: "2 days ago",
-    type: "info",
-    icon: Users,
-  },
-]
 
 export default function Dashboard() {
   const { userProfile } = useAuthStore()
-  const { setChatbots, setDataSources } = useAppStore()
+  const { stats, activities, isLoading, error } = useDashboardData()
+  const { chatbots } = useChatbots()
 
-  useEffect(() => {
-    setChatbots(mockChatbots)
-    setDataSources(mockDataSources)
-  }, [setChatbots, setDataSources])
+  // Debug logging
+  console.log('🏠 Dashboard render:', {
+    userProfile: userProfile ? {
+      id: userProfile.id,
+      email: userProfile.email,
+      company_id: userProfile.company_id,
+      hasCompany: !!userProfile.company
+    } : null,
+    stats,
+    activitiesCount: activities?.length || 0,
+    isLoading,
+    error: error?.message || error,
+    chatbotsCount: chatbots?.length || 0
+  })
+
+  // Get the first active chatbot ID for the chat link
+  const firstActiveChatbotId = useMemo(() => {
+    const activeChatbot = chatbots.find(bot => bot.is_active)
+    return activeChatbot?.id || 'sample'
+  }, [chatbots])
+
+  // Define quick actions with dynamic chat link
+  const quickActions = useMemo(() => [
+    {
+      title: "Upload Data Source",
+      description: "Add new knowledge to your chatbots",
+      icon: Upload,
+      color: "from-blue-500 to-blue-600",
+      href: AppRoute.DASHBOARD_DATA,
+    },
+    {
+      title: "Create New Chatbot",
+      description: "Build your next AI assistant",
+      icon: Bot,
+      color: "from-purple-500 to-purple-600",
+      href: AppRoute.DASHBOARD_CHATBOTS,
+    },
+    {
+      title: "Test Chat Interface",
+      description: "Try out your chatbots",
+      icon: MessageSquare,
+      color: "from-green-500 to-green-600",
+      href: AppRoute.CHAT + `?chatbotId=${firstActiveChatbotId}`,
+    },
+    {
+      title: "View Analytics",
+      description: "Monitor performance metrics",
+      icon: TrendingUp,
+      color: "from-orange-500 to-orange-600",
+      href: AppRoute.DASHBOARD_ANALYTICS,
+    },
+  ], [firstActiveChatbotId])
+
+  // Generate stats data from API response with fallback
+  const statsData = useMemo(() => {
+    // Use fallback data if no stats available yet
+    const fallbackStats = {
+      totalChatbots: 0,
+      totalDataSources: 0,
+      messagesToday: 0,
+      activeChats: 0
+    }
+    
+    const currentStats = stats || fallbackStats
+    
+    return [
+      {
+        title: "Total Chatbots",
+        value: currentStats.totalChatbots.toString(),
+        description: currentStats.totalChatbots > 0 ? "Active chatbots" : "No chatbots yet",
+        icon: Bot,
+      },
+      {
+        title: "Data Sources",
+        value: currentStats.totalDataSources.toString(),
+        description: currentStats.totalDataSources > 0 ? "Connected sources" : "No data sources yet",
+        icon: Database,
+      },
+      {
+        title: "Messages Today",
+        value: currentStats.messagesToday.toString(),
+        description: currentStats.messagesToday > 0 ? "from yesterday" : "No messages today",
+        icon: MessageSquare,
+      },
+      {
+        title: "Active Chats",
+        value: currentStats.activeChats.toString(),
+        description: currentStats.activeChats > 0 ? "Currently online" : "No active chats",
+        icon: TrendingUp,
+      },
+    ]
+  }, [stats])
+
+  // Map icon strings to actual icon components
+  const getIconComponent = (iconName: string) => {
+    switch (iconName) {
+      case 'Bot': return Bot
+      case 'Upload': return Upload
+      case 'Zap': return Zap
+      case 'Users': return Users
+      default: return MessageSquare
+    }
+  }
+
+  // Show loading state
+  if (isLoading) {
+    return (
+      <div className="flex-1 space-y-8 p-4 md:p-8 pt-6 bg-gradient-to-br from-background via-background to-primary/5">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="flex flex-col items-center space-y-4">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <p className="text-lg text-muted-foreground">Loading dashboard...</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Show message if no company_id (user not properly set up)
+  if (!userProfile?.company_id) {
+    return (
+      <div className="flex-1 space-y-8 p-4 md:p-8 pt-6 bg-gradient-to-br from-background via-background to-primary/5">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="flex flex-col items-center space-y-4">
+            <div className="p-4 rounded-lg bg-orange-100 text-orange-800 dark:bg-orange-900/20 dark:text-orange-400">
+              <h3 className="font-semibold mb-2">Setup Required</h3>
+              <p>Your account needs to be associated with a company to view the dashboard.</p>
+              <p className="text-sm mt-2">Please contact support or complete your account setup.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <div className="flex-1 space-y-8 p-4 md:p-8 pt-6 bg-gradient-to-br from-background via-background to-primary/5">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="flex flex-col items-center space-y-4">
+            <div className="p-4 rounded-lg bg-destructive/10 text-destructive">
+              Failed to load dashboard data
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="flex-1 space-y-8 p-4 md:p-8 pt-6 bg-gradient-to-br from-background via-background to-primary/5">
@@ -218,39 +272,86 @@ export default function Dashboard() {
               </p>
             </div>
             <div className="space-y-4">
-              {recentActivity.map((activity, index) => (
-                <div
-                  key={activity.id}
-                  className="flex items-start space-x-4 p-3 rounded-lg transition-all duration-300 hover:bg-muted/50 group animate-in slide-in-from-right-4 duration-700"
-                  style={{ animationDelay: `${index * 100}ms` }}
-                >
-                  <div
-                    className={`p-2 rounded-lg transition-all duration-300 group-hover:scale-110 ${
-                      activity.type === "success"
-                        ? "bg-green-100 text-green-600 dark:bg-green-900/20 dark:text-green-400"
-                        : "bg-blue-100 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400"
-                    }`}
-                  >
-                    <activity.icon className="h-4 w-4" />
-                  </div>
-                  <div className="flex-1 space-y-1">
-                    <p className="text-sm font-medium leading-none">
-                      {activity.action}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      {activity.description}
-                    </p>
-                    <div className="flex items-center space-x-1 text-xs text-muted-foreground">
-                      <Clock className="h-3 w-3" />
-                      <span>{activity.time}</span>
+              {activities.length > 0 ? (
+                activities.map((activity, index) => {
+                  const IconComponent = getIconComponent(activity.icon)
+                  return (
+                    <div
+                      key={activity.id}
+                      className="flex items-start space-x-4 p-3 rounded-lg transition-all duration-300 hover:bg-muted/50 group animate-in slide-in-from-right-4 duration-700"
+                      style={{ animationDelay: `${index * 100}ms` }}
+                    >
+                      <div
+                        className={`p-2 rounded-lg transition-all duration-300 group-hover:scale-110 ${
+                          activity.type === "success"
+                            ? "bg-green-100 text-green-600 dark:bg-green-900/20 dark:text-green-400"
+                            : activity.type === "error" 
+                            ? "bg-red-100 text-red-600 dark:bg-red-900/20 dark:text-red-400"
+                            : "bg-blue-100 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400"
+                        }`}
+                      >
+                        <IconComponent className="h-4 w-4" />
+                      </div>
+                      <div className="flex-1 space-y-1">
+                        <p className="text-sm font-medium leading-none">
+                          {activity.action}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          {activity.description}
+                        </p>
+                        <div className="flex items-center space-x-1 text-xs text-muted-foreground">
+                          <Clock className="h-3 w-3" />
+                          <span>{activity.time}</span>
+                        </div>
+                      </div>
                     </div>
+                  )
+                })
+              ) : (
+                <div className="text-center py-8">
+                  <div className="text-muted-foreground mb-2">
+                    <Clock className="h-8 w-8 mx-auto mb-2 opacity-50" />
                   </div>
+                  <p className="text-sm text-muted-foreground">
+                    No recent activity yet
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Start by creating a chatbot or uploading data
+                  </p>
                 </div>
-              ))}
+              )}
             </div>
           </div>
         </AnimatedCard>
       </div>
+
+      {/* Debug Section - Remove this in production */}
+      {process.env.NODE_ENV === 'development' && (
+        <AnimatedCard className="p-4 bg-gray-50 dark:bg-gray-900">
+          <details className="text-sm">
+            <summary className="cursor-pointer font-medium mb-2">🔧 Debug Information</summary>
+            <div className="space-y-2 text-xs">
+              <div><strong>User Profile:</strong> {userProfile ? 'Present' : 'Missing'}</div>
+              <div><strong>Company ID:</strong> {userProfile?.company_id || 'None'}</div>
+              <div><strong>Stats Data:</strong> {stats ? 'Loaded' : 'Not loaded'}</div>
+              <div><strong>Activities:</strong> {activities?.length || 0} items</div>
+              <div><strong>Loading:</strong> {isLoading ? 'Yes' : 'No'}</div>
+              <div><strong>Error:</strong> {error ? error.toString() : 'None'}</div>
+              <div><strong>API Endpoints:</strong></div>
+              <div className="ml-4">
+                <a href="/api/test-dashboard" target="_blank" className="text-blue-500 hover:underline">
+                  Test Dashboard API
+                </a>
+              </div>
+              <div className="ml-4">
+                <a href="/api/health" target="_blank" className="text-blue-500 hover:underline">
+                  Health Check
+                </a>
+              </div>
+            </div>
+          </details>
+        </AnimatedCard>
+      )}
     </div>
   )
 }

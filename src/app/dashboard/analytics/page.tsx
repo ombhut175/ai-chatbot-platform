@@ -16,28 +16,24 @@ const analyticsData = {
       value: "2,847",
       description: "This month",
       icon: MessageSquare,
-      trend: { value: 23, isPositive: true },
     },
     {
       title: "Active Users",
       value: "1,234",
       description: "Last 30 days",
       icon: Users,
-      trend: { value: 12, isPositive: true },
     },
     {
       title: "Avg Response Time",
       value: "1.2s",
       description: "Average response",
       icon: Clock,
-      trend: { value: 8, isPositive: false },
     },
     {
       title: "Satisfaction Rate",
       value: "94.5%",
       description: "User satisfaction",
       icon: TrendingUp,
-      trend: { value: 5, isPositive: true },
     },
   ],
   chatbotPerformance: [

@@ -88,7 +88,7 @@ export async function DELETE(
     return NextResponse.json({
       success: true,
       message: 'API key revoked successfully'
-    }, { status: 204 })
+    }, { status: 200 })
   } catch (error) {
     console.error('❌ Unexpected error in revoke API key:', error)
     return NextResponse.json(

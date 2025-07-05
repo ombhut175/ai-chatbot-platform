@@ -70,7 +70,7 @@ export default function ChatbotIntegrationsPage() {
   const [newApiKey, setNewApiKey] = useState<string | null>(null)
   const [keyToRevoke, setKeyToRevoke] = useState<string | null>(null)
   const [isCreatingKey, setIsCreatingKey] = useState(false)
-  const [selectedApiKeyForExample, setSelectedApiKeyForExample] = useState<string>("")
+  const [selectedApiKeyForExample, setSelectedApiKeyForExample] = useState<string>("placeholder")
   
   // Use the API keys hook
   const { apiKeys, isLoading: isLoadingKeys, error: apiKeysError, createApiKey, revokeApiKey } = useApiKeys(chatbotId)
@@ -137,11 +137,14 @@ export default function ChatbotIntegrationsPage() {
     
     // Use the selected API key, or the first active API key, or placeholder
     let displayApiKey = selectedApiKeyForExample
-    if (!displayApiKey && apiKeys.length > 0) {
-      const activeKey = apiKeys.find(key => key.is_active)
-      displayApiKey = activeKey ? activeKey.key_preview : 'YOUR_API_KEY'
+    if (!displayApiKey || displayApiKey === 'placeholder') {
+      if (apiKeys.length > 0) {
+        const activeKey = apiKeys.find(key => key.is_active)
+        displayApiKey = activeKey ? activeKey.key_preview : 'YOUR_API_KEY'
+      } else {
+        displayApiKey = 'YOUR_API_KEY'
+      }
     }
-    displayApiKey = displayApiKey || 'YOUR_API_KEY'
     
     return `curl -X POST ${appUrl}/api/chat/public \\
   -H "Authorization: Bearer ${displayApiKey}" \\
@@ -507,7 +510,7 @@ export default function ChatbotIntegrationsPage() {
                   <CardDescription>Example cURL request to send a message</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {apiKeys.length > 0 && (
+                  {apiKeys.length > 0 && !isLoadingKeys && (
                     <div className="space-y-2">
                       <Label htmlFor="api-key-select">API Key for Example</Label>
                       <Select
@@ -518,9 +521,9 @@ export default function ChatbotIntegrationsPage() {
                           <SelectValue placeholder="Select an API key" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">Use placeholder key</SelectItem>
+                          <SelectItem value="placeholder">Use placeholder key</SelectItem>
                           {apiKeys
-                            .filter(key => key.is_active)
+                            .filter(key => key.is_active && key.key_preview && key.key_preview.trim() !== '')
                             .map((key) => (
                               <SelectItem key={key.id} value={key.key_preview}>
                                 {key.key_preview} {key.last_used_at && (
@@ -547,7 +550,7 @@ export default function ChatbotIntegrationsPage() {
                       </p>
                     )}
                   </div>
-                  {selectedApiKeyForExample && (
+                  {selectedApiKeyForExample && selectedApiKeyForExample !== 'placeholder' && (
                     <div className="p-3 bg-blue-50 dark:bg-blue-950 rounded-lg">
                       <p className="text-sm text-blue-900 dark:text-blue-100">
                         💡 This example uses your actual API key. Copy it to test with your chatbot immediately!

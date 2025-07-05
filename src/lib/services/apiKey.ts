@@ -43,6 +43,10 @@ export class ApiKeyService {
    * Create a preview of the API key (first 7 and last 4 characters)
    */
   private createKeyPreview(apiKey: string): string {
+    if (!apiKey || typeof apiKey !== 'string') {
+      console.warn('Invalid API key provided for preview:', apiKey)
+      return 'sk_invalid'
+    }
     if (apiKey.length <= 15) return apiKey // Don't preview if key is too short
     return `${apiKey.substring(0, 7)}...${apiKey.substring(apiKey.length - 4)}`
   }
@@ -64,13 +68,15 @@ export class ApiKeyService {
       }
 
       // Transform data to include only key preview
-      const transformedData: ApiKeyListItem[] = (data || []).map(item => ({
-        id: item.id,
-        key_preview: this.createKeyPreview(item.api_key),
-        created_at: item.created_at,
-        last_used_at: item.last_used_at,
-        is_active: item.is_active
-      }))
+      const transformedData: ApiKeyListItem[] = (data || [])
+        .filter(item => item && item.id && item.api_key) // Filter out invalid items
+        .map(item => ({
+          id: item.id,
+          key_preview: this.createKeyPreview(item.api_key),
+          created_at: item.created_at || new Date().toISOString(),
+          last_used_at: item.last_used_at,
+          is_active: Boolean(item.is_active)
+        }))
 
       return { success: true, data: transformedData }
     } catch (error) {

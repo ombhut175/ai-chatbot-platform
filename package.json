@@ -5,8 +5,11 @@
   "scripts": {
     "build": "next build",
     "dev": "next dev",
+    "dev:clean": "powershell -ExecutionPolicy Bypass -File clean-start.ps1",
+    "dev:turbo": "next dev --turbo",
     "lint": "next lint",
-    "start": "next start"
+    "start": "next start",
+    "clean": "powershell -Command \"if (Test-Path .next) { Remove-Item -Path .next -Recurse -Force }\""
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
