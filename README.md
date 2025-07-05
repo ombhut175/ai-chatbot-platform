@@ -2,48 +2,73 @@
 
 [➡️ Project Purpose & Route Descriptions](docs/projectPurpose.md)
 
-A multi-tenant platform to create, deploy, and manage AI-powered chatbots for your business. Easily upload data, build custom chatbots, integrate them into your website or app, and monitor performance with advanced analytics.
+A comprehensive multi-tenant platform to create, deploy, and manage AI-powered chatbots for your business. Built with Next.js 15, this platform enables easy data upload, custom chatbot creation, seamless integrations, and detailed analytics monitoring.
 
-## Features
+## 🚀 Features
 
-- **Multi-Tenant Support:** Manage multiple companies, users, and chatbots in one platform.
-- **Custom Chatbot Builder:** Create chatbots with configurable personalities, welcome messages, and themes.
-- **Flexible Data Sources:** Upload PDFs, CSVs, DOCX, URLs, and more to power your chatbot's knowledge base.
-- **Integrations:** Embed chatbots via JavaScript widget, iFrame, or API.
-- **Analytics Dashboard:** Track conversations, user engagement, satisfaction, and more.
-- **User Management:** Company and user profile management, authentication, and settings.
-- **24/7 AI Support:** Always-available, context-aware AI chat for your customers.
+- **Multi-Tenant Architecture:** Secure company-based isolation with user management
+- **Custom Chatbot Builder:** Create AI chatbots with configurable personalities, welcome messages, and themes
+- **Flexible Data Sources:** Support for PDFs, CSVs, DOCX, JSON, URLs, and Q&A pairs
+- **Multiple Integrations:** Embed via JavaScript widget, iFrame, or REST API
+- **Real-time Analytics:** Track conversations, user engagement, satisfaction, and performance metrics
+- **Vector Search:** Powered by Pinecone for intelligent document retrieval
+- **Multiple AI Models:** Support for Google Gemini and Hugging Face models
+- **Background Processing:** Inngest-powered async data processing
+- **Modern UI:** Built with Radix UI, Tailwind CSS, and Framer Motion
 
-## Getting Started
+## 🛠️ Tech Stack
 
-### Prerequisites
+- **Frontend:** Next.js 15, React 19, TypeScript, Tailwind CSS
+- **Backend:** Next.js API Routes, Supabase (Database & Auth)
+- **AI/ML:** Google Gemini, Hugging Face, Pinecone (Vector Database)
+- **Background Jobs:** Inngest
+- **UI Components:** Radix UI, Lucide React, Framer Motion
+- **State Management:** Zustand
+- **File Processing:** PDF-parse, Mammoth, XLSX, Cheerio
+- **Form Handling:** React Hook Form, Zod validation
+
+## 📋 Prerequisites
+
 - [Node.js](https://nodejs.org/) (v18+ recommended)
 - [pnpm](https://pnpm.io/) (preferred) or npm
+- Supabase account and project
+- Pinecone account and index
+- Google Gemini API key
+- Hugging Face API token (optional)
 
-### Installation
+## 🚀 Installation
 
 1. **Clone the repository:**
    ```bash
    git clone <repo-url>
    cd ai-chatbot-platform
    ```
+
 2. **Install dependencies:**
    ```bash
    pnpm install
    # or
    npm install
    ```
-3. **Configure environment variables:**
-   - Copy `env.example.txt` to `.env` and adjust as needed:
-     ```bash
-     cp env.example.txt .env
-     ```
-   - The following environment variables are required:
-     - `NODE_ENV` (e.g., `development`)
-     - `HUGGING_FACE_API_URL` (e.g., `https://api-inference.huggingface.co/models/...`)
-     - `HUGGING_FACE_API_TOKEN` (your Hugging Face API token)
 
-4. **Run the development server:**
+3. **Configure environment variables:**
+   - Copy `env.example.txt` to `.env.local`:
+     ```bash
+     cp env.example.txt .env.local
+     ```
+   - Fill in all required environment variables (see [Environment Variables](#environment-variables))
+
+4. **Set up Supabase:**
+   - Create a new Supabase project
+   - Set up the database schema (refer to docs for schema setup)
+   - Configure authentication settings
+
+5. **Set up Pinecone:**
+   - Create a Pinecone account
+   - Create an index with appropriate dimensions
+   - Note your API key and index name
+
+6. **Run the development server:**
    ```bash
    pnpm dev
    # or
@@ -51,40 +76,137 @@ A multi-tenant platform to create, deploy, and manage AI-powered chatbots for yo
    ```
    The app will be available at [http://localhost:3000](http://localhost:3000).
 
-## Usage
+## 📖 Usage
 
-- **Sign Up / Login:** Register a new account or use demo credentials (any email/password) to explore the platform.
-- **Dashboard:** View chatbot stats, quick actions, and recent activity.
-- **Chatbots:** Create, configure, and manage your AI chatbots. Assign data sources and set custom personalities.
-- **Data Sources:** Upload files, add manual text, scrape URLs, or input Q&A pairs to build your chatbot's knowledge base.
-- **Integrations:** Get code snippets to embed your chatbot as a widget, iFrame, or use the API.
-- **Analytics:** Monitor chatbot performance, user engagement, and top questions.
-- **Settings/Profile:** Manage company info, user profile, API keys, and chatbot defaults.
+### Authentication
+- **Sign Up:** Register a new company account with user details
+- **Login:** Access your dashboard with email/password authentication
+- **Multi-tenant:** Each company has isolated data and users
 
-## Project Structure
+### Dashboard Features
+- **Overview:** View chatbot statistics, quick actions, and recent activity
+- **Chatbots:** Create, configure, and manage AI chatbots with custom personalities
+- **Data Sources:** Upload files (PDF, CSV, DOCX, JSON), scrape URLs, or add Q&A pairs
+- **Analytics:** Monitor performance, user engagement, and conversation insights
+- **Integrations:** Generate embed codes for JavaScript widget, iFrame, or API usage
+- **Settings:** Manage company profile, API keys, and chatbot defaults
 
-- `src/app/` — Next.js app directory (pages, routes, layouts)
-- `src/components/` — UI and functional components
-- `src/lib/` — Types, stores, utilities, and mock data
-- `public/` — Static assets (images, logos)
+### Chatbot Creation Workflow
+1. **Upload Data:** Add knowledge base through file upload or URL scraping
+2. **Create Chatbot:** Configure name, personality, and welcome message
+3. **Link Data:** Associate data sources with your chatbot
+4. **Test & Deploy:** Use the chat interface to test, then deploy via integrations
+5. **Monitor:** Track performance through the analytics dashboard
 
-## Environment Variables
-
-See `env.example.txt` for all required variables. Key variables include:
+## 📁 Project Structure
 
 ```
+ai-chatbot-platform/
+├── src/
+│   ├── app/                    # Next.js App Router
+│   │   ├── (auth)/            # Authentication routes
+│   │   ├── api/               # API routes
+│   │   ├── chat/              # Chat interface
+│   │   └── dashboard/         # Dashboard pages
+│   ├── components/            # Reusable UI components
+│   ├── lib/                   # Utilities, types, and stores
+│   └── inngest/              # Background job functions
+├── docs/                      # Documentation
+├── public/                    # Static assets
+└── clean-start.ps1           # Windows development script
+```
+
+### Key Directories
+- **`src/app/`** — Next.js 15 App Router with route groups
+- **`src/components/`** — Reusable UI components and layouts
+- **`src/lib/`** — Utilities, types, Supabase client, and Zustand stores
+- **`src/inngest/`** — Background processing functions
+- **`docs/`** — Comprehensive project documentation
+
+## 🔧 Environment Variables
+
+Copy `env.example.txt` to `.env.local` and configure the following variables:
+
+### Required Variables
+```bash
+# App Configuration
 NODE_ENV=development
-HUGGING_FACE_API_URL=your_hf_endpoint_url   # e.g. https://api-inference.huggingface.co/models/…
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+
+# Supabase (Database & Authentication)
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
+
+# Pinecone (Vector Database)
+PINECONE_API_KEY=your_pinecone_api_key
+PINECONE_ENVIRONMENT=your_pinecone_environment
+PINECONE_INDEX_NAME=your_pinecone_index_name
+
+# Google Gemini AI
+GEMINI_API_KEY=your_gemini_api_key
+
+# Background Jobs (Inngest)
+INNGEST_EVENT_KEY=your_inngest_event_key
+INNGEST_SIGNING_KEY=your_inngest_signing_key
+```
+
+### Optional Variables
+```bash
+# Hugging Face (Alternative AI Provider)
+HUGGING_FACE_API_URL=https://api-inference.huggingface.co/models/your_model
 HUGGING_FACE_API_TOKEN=your_hf_token
 ```
 
-## Scripts
+## 🔨 Available Scripts
 
-- `pnpm dev` / `npm run dev` — Start development server
-- `pnpm build` / `npm run build` — Build for production
-- `pnpm start` / `npm start` — Start production server
-- `pnpm lint` / `npm run lint` — Lint code
+```bash
+# Development
+pnpm dev              # Start development server
+pnpm dev:turbo        # Start development server with Turbo
+pnpm dev:clean        # Clean start (Windows PowerShell)
 
-## License
+# Production
+pnpm build            # Build for production
+pnpm start            # Start production server
 
-MIT
+# Maintenance
+pnpm lint             # Run ESLint
+pnpm clean            # Clean Next.js cache
+```
+
+## 📚 Documentation
+
+- [Project Purpose & Routes](docs/projectPurpose.md)
+- [System Architecture](docs/architecture/system-overview.md)
+- [API Reference](docs/api/api-reference.md)
+- [Process Flow](docs/detailed-process-flow.md)
+- [Authentication Changes](docs/AUTHENTICATION_CHANGES.md)
+
+## 🚀 Deployment
+
+1. **Build the application:**
+   ```bash
+   pnpm build
+   ```
+
+2. **Set up production environment variables**
+
+3. **Deploy to your preferred platform:**
+   - Vercel (recommended for Next.js)
+   - Netlify
+   - Railway
+   - Self-hosted
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
