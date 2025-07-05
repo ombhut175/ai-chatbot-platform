@@ -1,9 +1,24 @@
 import { Inngest } from 'inngest'
+import { validateInngestConfig, inngestConfig } from './config'
+
+// Validate configuration on initialization
+if (typeof window === 'undefined') {
+  validateInngestConfig()
+}
 
 // Create the Inngest client
+// When using Vercel integration, some config is auto-handled
 export const inngest = new Inngest({
   id: 'ai-chatbot-platform',
   name: 'AI Chatbot Platform',
+  // Only add explicit config if env vars are present
+  ...(inngestConfig.eventKey && {
+    eventKey: inngestConfig.eventKey,
+  }),
+  // Set environment based on NODE_ENV
+  ...(inngestConfig.isProduction && {
+    env: 'production',
+  }),
 })
 
 // Event types for type safety

@@ -168,8 +168,14 @@ export async function POST(request: NextRequest) {
 
     // Send event to Inngest for background processing
     console.log('🎯 Sending event to Inngest for background processing...')
+    console.log('📊 Inngest environment:', {
+      NODE_ENV: process.env.NODE_ENV,
+      hasEventKey: !!process.env.INNGEST_EVENT_KEY,
+      hasSigningKey: !!process.env.INNGEST_SIGNING_KEY,
+    })
+    
     try {
-      await inngest.send({
+      const eventId = await inngest.send({
         name: 'file/process',
         data: {
           dataSourceId: dataSource.id,
@@ -179,9 +185,14 @@ export async function POST(request: NextRequest) {
           storagePath: uploadResult.data!.path
         }
       })
-      console.log('✅ Inngest event sent successfully')
+      console.log('✅ Inngest event sent successfully, event ID:', eventId)
     } catch (inngestError) {
       console.error('❌ Failed to send Inngest event:', inngestError)
+      console.error('📊 Error details:', {
+        name: inngestError instanceof Error ? inngestError.name : 'Unknown',
+        message: inngestError instanceof Error ? inngestError.message : String(inngestError),
+        stack: inngestError instanceof Error ? inngestError.stack : undefined
+      })
       
              // Update database status to error
        await dataSourceService.updateDataSource(dataSource.id, { status: DataSourceStatus.ERROR })

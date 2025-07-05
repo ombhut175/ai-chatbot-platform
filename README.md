@@ -185,18 +185,47 @@ pnpm clean            # Clean Next.js cache
 
 ## 🚀 Deployment
 
-1. **Build the application:**
+### Deploying to Vercel (Recommended)
+
+1. **Set up Inngest Cloud** (Required for background processing):
+   - Create account at [app.inngest.com](https://app.inngest.com)
+   - Create new app and note your Event Key and Signing Key
+   - See [detailed guide](docs/deployment/vercel-inngest-setup.md)
+
+2. **Configure Vercel Environment Variables**:
    ```bash
-   pnpm build
+   # Required for background processing
+   INNGEST_EVENT_KEY=your_inngest_event_key
+   INNGEST_SIGNING_KEY=your_inngest_signing_key
+   
+   # Other required variables
+   NODE_ENV=production
+   NEXT_PUBLIC_APP_URL=https://your-domain.vercel.app
+   # ... (see env.example.txt for full list)
    ```
 
-2. **Set up production environment variables**
+3. **Deploy to Vercel**:
+   ```bash
+   # Install Vercel CLI
+   npm i -g vercel
+   
+   # Deploy
+   vercel --prod
+   ```
 
-3. **Deploy to your preferred platform:**
-   - Vercel (recommended for Next.js)
-   - Netlify
-   - Railway
-   - Self-hosted
+4. **Configure Inngest Webhook**:
+   - In Inngest Cloud, set webhook URL to: `https://your-app.vercel.app/api/inngest`
+   - Test the webhook connection
+
+5. **Verify Deployment**:
+   - Upload a test file
+   - Check Inngest Cloud dashboard for event processing
+   - Monitor Vercel Functions logs
+
+### Other Platforms
+- **Netlify**: Requires additional configuration for background jobs
+- **Railway**: Full Node.js support, works out of the box
+- **Self-hosted**: Ensure long-running process support
 
 ## 🤝 Contributing
 
