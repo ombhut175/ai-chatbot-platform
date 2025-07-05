@@ -146,7 +146,8 @@ PINECONE_INDEX_NAME=your_pinecone_index_name
 # Google Gemini AI
 GEMINI_API_KEY=your_gemini_api_key
 
-# Background Jobs (Inngest)
+# Background Jobs (Inngest) - Optional when using Vercel integration
+# Only required if NOT using Vercel Inngest integration
 INNGEST_EVENT_KEY=your_inngest_event_key
 INNGEST_SIGNING_KEY=your_inngest_signing_key
 ```
@@ -187,14 +188,23 @@ pnpm clean            # Clean Next.js cache
 
 ### Deploying to Vercel (Recommended)
 
-1. **Set up Inngest Cloud** (Required for background processing):
+1. **Set up Inngest for Background Processing** (Choose one option):
+   
+   **Option A: Vercel Integration (Recommended)**
+   - In your Vercel project dashboard, go to Integrations
+   - Add the Inngest integration
+   - Environment variables are automatically configured
+   
+   **Option B: Manual Setup**
    - Create account at [app.inngest.com](https://app.inngest.com)
    - Create new app and note your Event Key and Signing Key
-   - See [detailed guide](docs/deployment/vercel-inngest-setup.md)
+   - Add these to your Vercel environment variables
+   
+   See [detailed guide](docs/deployment/vercel-inngest-setup.md)
 
 2. **Configure Vercel Environment Variables**:
    ```bash
-   # Required for background processing
+   # Required for manual Inngest setup (skip if using Vercel integration)
    INNGEST_EVENT_KEY=your_inngest_event_key
    INNGEST_SIGNING_KEY=your_inngest_signing_key
    

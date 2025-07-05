@@ -7,12 +7,12 @@ if (typeof window === 'undefined') {
 }
 
 // Create the Inngest client
-// When using Vercel integration, some config is auto-handled
+// When using Vercel integration, configuration is auto-handled
 export const inngest = new Inngest({
   id: 'ai-chatbot-platform',
   name: 'AI Chatbot Platform',
-  // Only add explicit config if env vars are present
-  ...(inngestConfig.eventKey && {
+  // Only add explicit eventKey if not using Vercel integration
+  ...(inngestConfig.eventKey && !inngestConfig.isVercel && {
     eventKey: inngestConfig.eventKey,
   }),
   // Set environment based on NODE_ENV

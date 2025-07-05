@@ -8,6 +8,20 @@ This guide explains how to deploy the AI Chatbot Platform to Vercel with proper 
 2. Inngest account (free tier available)
 3. All other services configured (Supabase, Pinecone, etc.)
 
+## Choose Your Setup Method
+
+**Option 1: Vercel Integration (Recommended)**
+- ✅ Automatic environment variable configuration
+- ✅ Automatic webhook registration
+- ✅ Seamless deployment updates
+- ✅ No manual configuration needed
+
+**Option 2: Manual Setup**
+- Requires manual environment variable setup
+- Requires manual webhook configuration
+- More control over configuration
+- Better for debugging or custom setups
+
 ## Option 1: Using Vercel Integration (Recommended)
 
 ### Step 1: Install Inngest Integration
@@ -46,7 +60,9 @@ This guide explains how to deploy the AI Chatbot Platform to Vercel with proper 
 
 Add these environment variables in your Vercel project settings:
 
-### Required Inngest Variables
+### Required Inngest Variables (Manual Setup Only)
+**Note:** Skip this section if you're using the Vercel integration - these variables are automatically configured.
+
 ```bash
 INNGEST_EVENT_KEY=your_inngest_event_key_from_cloud
 INNGEST_SIGNING_KEY=your_inngest_signing_key_from_cloud
@@ -85,7 +101,9 @@ HUGGING_FACE_API_TOKEN=your_hf_token
 
 3. **Deploy** the project
 
-## Step 4: Register Inngest Webhook
+## Step 4: Register Inngest Webhook (Manual Setup Only)
+
+**Note:** Skip this step if you're using the Vercel integration - webhooks are automatically registered.
 
 After deployment, you need to register your Inngest webhook:
 
@@ -117,8 +135,8 @@ After deployment, you need to register your Inngest webhook:
 ### Background jobs not running
 
 1. **Check environment variables**:
-   - Ensure `INNGEST_EVENT_KEY` and `INNGEST_SIGNING_KEY` are set in Vercel
-   - Verify they match your Inngest Cloud app
+   - **If using Vercel integration**: Verify the integration is properly connected and active
+   - **If using manual setup**: Ensure `INNGEST_EVENT_KEY` and `INNGEST_SIGNING_KEY` are set in Vercel and match your Inngest Cloud app
 
 2. **Verify webhook registration**:
    - Test webhook URL: `curl -X POST https://your-app.vercel.app/api/inngest`

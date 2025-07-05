@@ -170,8 +170,10 @@ export async function POST(request: NextRequest) {
     console.log('🎯 Sending event to Inngest for background processing...')
     console.log('📊 Inngest environment:', {
       NODE_ENV: process.env.NODE_ENV,
+      isVercel: !!process.env.VERCEL,
       hasEventKey: !!process.env.INNGEST_EVENT_KEY,
       hasSigningKey: !!process.env.INNGEST_SIGNING_KEY,
+      integrationMode: process.env.VERCEL ? 'Vercel Integration' : 'Manual Configuration'
     })
     
     try {

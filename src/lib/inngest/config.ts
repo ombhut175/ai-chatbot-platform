@@ -4,23 +4,30 @@
 
 export function validateInngestConfig() {
   const isProduction = process.env.NODE_ENV === 'production'
+  const isVercel = !!process.env.VERCEL
   
   if (isProduction) {
-    // When using Vercel integration, these might be auto-configured
-    const hasVercelIntegration = process.env.INNGEST_SIGNING_KEY || process.env.INNGEST_EVENT_KEY
-    
-    if (!hasVercelIntegration) {
-      console.warn('⚠️ Inngest environment variables not found. If using Vercel integration, they may be auto-configured.')
+    if (isVercel) {
+      // When using Vercel integration, environment variables are auto-configured
+      console.log('✅ Using Vercel Inngest integration - environment variables auto-configured')
     } else {
-      console.log('✅ Inngest configuration detected')
+      // Manual configuration - check for required environment variables
+      const hasManualConfig = process.env.INNGEST_SIGNING_KEY && process.env.INNGEST_EVENT_KEY
+      
+      if (!hasManualConfig) {
+        console.warn('⚠️ Inngest environment variables not found. Please set INNGEST_SIGNING_KEY and INNGEST_EVENT_KEY or use Vercel integration.')
+      } else {
+        console.log('✅ Inngest manual configuration detected')
+      }
     }
     
     // Log configuration status for debugging
     console.log('📊 Inngest configuration status:', {
       hasEventKey: !!process.env.INNGEST_EVENT_KEY,
       hasSigningKey: !!process.env.INNGEST_SIGNING_KEY,
-      isVercel: !!process.env.VERCEL,
-      environment: process.env.NODE_ENV
+      isVercel: isVercel,
+      environment: process.env.NODE_ENV,
+      integrationMode: isVercel ? 'Vercel Integration' : 'Manual Configuration'
     })
   } else {
     console.log('🔧 Running Inngest in development mode')
@@ -42,7 +49,9 @@ export function getInngestWebhookUrl(): string {
 
 export const inngestConfig = {
   isProduction: process.env.NODE_ENV === 'production',
-  eventKey: process.env.INNGEST_EVENT_KEY,
-  signingKey: process.env.INNGEST_SIGNING_KEY,
+  isVercel: !!process.env.VERCEL,
+  // Only include keys if manually configured (not using Vercel integration)
+  eventKey: process.env.VERCEL ? undefined : process.env.INNGEST_EVENT_KEY,
+  signingKey: process.env.VERCEL ? undefined : process.env.INNGEST_SIGNING_KEY,
   webhookUrl: getInngestWebhookUrl(),
 }
