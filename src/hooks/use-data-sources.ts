@@ -18,11 +18,13 @@ export function useDataSources() {
     companyId ? `/api/data-sources/${companyId}` : null,
     () => companyId ? dataSourceService.getDataSourcesByCompany(companyId) : null,
     {
-      revalidateOnFocus: false,
+      revalidateOnFocus: true,
       revalidateOnReconnect: true,
-      dedupingInterval: 5000,
-      // Refresh every 10 seconds to catch background processing updates
-      refreshInterval: 10000,
+      dedupingInterval: 2000,
+      // Refresh every 5 seconds to catch background processing updates
+      refreshInterval: 5000,
+      // Keep previous data while revalidating
+      keepPreviousData: true,
     }
   )
 
@@ -68,8 +70,11 @@ export function useFileUpload() {
           description: `${file.name} is being processed in the background. You'll see status updates automatically.`,
         })
         
-        // Revalidate the data sources list to catch any updates
-        mutate(`/api/data-sources/${userProfile.company_id}`)
+        // Force immediate revalidation of the data sources list
+        await mutate(`/api/data-sources/${userProfile.company_id}`, undefined, {
+          revalidate: true,
+          populateCache: false,
+        })
 
         console.log('🎉 Upload process completed successfully')
         return { success: true, data: result }

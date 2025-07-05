@@ -49,6 +49,13 @@ export default function DataSourcesClientPage() {
   const { scrapeUrl } = useUrlScraping()
   const { createQaPair } = useQaPairs()
   const { toast } = useToast()
+  
+  // Force refresh data after uploads
+  useEffect(() => {
+    if (!isUploading && dataSources) {
+      mutate()
+    }
+  }, [isUploading])
 
   const handleFiles = async (files: FileList) => {
     const fileArray = Array.from(files)
@@ -62,6 +69,8 @@ export default function DataSourcesClientPage() {
             title: "File uploaded successfully",
             description: `${file.name} has been uploaded and is being processed.`,
           })
+          // Force refresh after a short delay to ensure data is synced
+          setTimeout(() => mutate(), 1000)
         } else {
           toast({
             title: "Upload failed",

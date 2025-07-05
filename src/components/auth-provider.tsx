@@ -25,6 +25,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const supabase = createClient()
   const hasInitialized = useRef(false)
+  const supabaseRef = useRef(supabase)
 
   // Initialize auth state
   useEffect(() => {
@@ -83,21 +84,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (profile) {
           setUserProfile(profile)
         }
-      } else if (event === 'SIGNED_OUT') {
-        setUserProfile(null)
-        // Get current pathname inside the callback to avoid stale closure
-        const currentPath = window.location.pathname
-        // Only redirect if not already on auth pages
-        if (!authRoutes.includes(currentPath)) {
-          router.push('/login')
+        } else if (event === 'SIGNED_OUT') {
+          setUserProfile(null)
+          // Get current pathname inside the callback to avoid stale closure
+          const currentPath = window.location.pathname
+          // Only redirect if not already on auth pages
+          if (!authRoutes.includes(currentPath)) {
+            window.location.href = '/login'
+          }
         }
-      }
     })
 
     return () => {
       subscription.unsubscribe()
     }
-  }, [setUserProfile, setSupabaseUser, setInitializing, setError, router])
+  }, [setUserProfile, setSupabaseUser, setInitializing, setError])
 
   // Handle redirects for authenticated users only
   // The middleware handles unauthenticated user redirects
