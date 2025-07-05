@@ -5,9 +5,10 @@ import { TableName } from '@/helpers/string_const/tables'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> },
 ) {
-  console.log('🤖 Get chatbot by ID API called:', params.id)
+  const { id } = await params
+  console.log('🤖 Get chatbot by ID API called:', id)
   
   try {
     // Get authenticated user
@@ -41,7 +42,7 @@ export async function GET(
     const chatbotService = createChatbotService(supabase)
     
     // Fetch the chatbot
-    const result = await chatbotService.getChatbotById(params.id)
+    const result = await chatbotService.getChatbotById(id)
     
     if (!result.success) {
       console.error('❌ Failed to fetch chatbot:', result.error)
@@ -67,14 +68,14 @@ export async function GET(
     }
 
     // Get associated data sources
-    const dataSourcesResult = await chatbotService.getChatbotDataSources(params.id)
+    const dataSourcesResult = await chatbotService.getChatbotDataSources(id)
     
     const chatbotWithDataSources = {
       ...result.data,
       dataSources: dataSourcesResult.success ? dataSourcesResult.data : []
     }
 
-    console.log('✅ Fetched chatbot successfully:', params.id)
+    console.log('✅ Fetched chatbot successfully:', id)
     
     return NextResponse.json({
       success: true,
@@ -91,9 +92,10 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> },
 ) {
-  console.log('🤖 Update chatbot API called:', params.id)
+  const { id } = await params
+  console.log('🤖 Update chatbot API called:', id)
   
   try {
     // Get authenticated user
@@ -130,7 +132,7 @@ export async function PUT(
     const chatbotService = createChatbotService(supabase)
     
     // First verify the chatbot exists and belongs to the user's company
-    const existingResult = await chatbotService.getChatbotById(params.id)
+    const existingResult = await chatbotService.getChatbotById(id)
     
     if (!existingResult.success || !existingResult.data) {
       return NextResponse.json(
@@ -146,10 +148,10 @@ export async function PUT(
       )
     }
 
-    console.log('📝 Updating chatbot:', params.id, body)
+    console.log('📝 Updating chatbot:', id, body)
 
     // Update the chatbot
-    const result = await chatbotService.updateChatbot(params.id, {
+    const result = await chatbotService.updateChatbot(id, {
       name: body.name,
       description: body.description,
       type: body.type,
@@ -170,15 +172,15 @@ export async function PUT(
     // Handle data source updates if provided
     if (body.data_source_ids !== undefined) {
       // Remove all existing associations
-      await chatbotService.removeDataSourceAssociations(params.id)
+      await chatbotService.removeDataSourceAssociations(id)
       
       // Add new associations if any
       if (body.data_source_ids.length > 0) {
-        await chatbotService.associateDataSources(params.id, body.data_source_ids)
+        await chatbotService.associateDataSources(id, body.data_source_ids)
       }
     }
 
-    console.log('✅ Chatbot updated successfully:', params.id)
+    console.log('✅ Chatbot updated successfully:', id)
     
     return NextResponse.json({
       success: true,
@@ -195,9 +197,10 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> },
 ) {
-  console.log('🤖 Delete chatbot API called:', params.id)
+  const { id } = await params
+  console.log('🤖 Delete chatbot API called:', id)
   
   try {
     // Get authenticated user
@@ -231,7 +234,7 @@ export async function DELETE(
     const chatbotService = createChatbotService(supabase)
     
     // First verify the chatbot exists and belongs to the user's company
-    const existingResult = await chatbotService.getChatbotById(params.id)
+    const existingResult = await chatbotService.getChatbotById(id)
     
     if (!existingResult.success || !existingResult.data) {
       return NextResponse.json(
@@ -247,10 +250,13 @@ export async function DELETE(
       )
     }
 
-    console.log('🗑️ Deleting chatbot:', params.id)
+    console.log('🗑️ Deleting chatbot:', id)
 
-    // Delete the chatbot (cascading deletes will handle associations)
-    const result = await chatbotService.deleteChatbot(params.id)
+    // Delete all associations first
+    await chatbotService.removeDataSourceAssociations(id)
+
+    // Delete the chatbot
+    const result = await chatbotService.deleteChatbot(id)
 
     if (!result.success) {
       console.error('❌ Failed to delete chatbot:', result.error)
@@ -260,7 +266,7 @@ export async function DELETE(
       )
     }
 
-    console.log('✅ Chatbot deleted successfully:', params.id)
+    console.log('✅ Chatbot deleted successfully:', id)
     
     return NextResponse.json({
       success: true,

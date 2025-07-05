@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useRef } from "react"
 import { usePathname, useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 import { useAuthStore } from "@/lib/store"
@@ -24,9 +24,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const router = useRouter()
   const supabase = createClient()
+  const hasInitialized = useRef(false)
 
   // Initialize auth state
   useEffect(() => {
+    if (hasInitialized.current) return
+    hasInitialized.current = true
+    
     const initializeAuth = async () => {
       setInitializing(true)
       
@@ -72,8 +76,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       } else if (event === 'SIGNED_OUT') {
         setUserProfile(null)
+        // Get current pathname inside the callback to avoid stale closure
+        const currentPath = window.location.pathname
         // Only redirect if not already on auth pages
-        if (!authRoutes.includes(pathname)) {
+        if (!authRoutes.includes(currentPath)) {
           router.push('/login')
         }
       }
@@ -82,25 +88,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => {
       subscription.unsubscribe()
     }
-  }, [supabase, setSupabaseUser, setUserProfile, setInitializing, setError, pathname, router])
+  }, [])
 
-  // Handle redirects in useEffect to avoid render-time side effects
+  // Handle redirects for authenticated users only
+  // The middleware handles unauthenticated user redirects
   useEffect(() => {
     if (initializing) return
 
-    const isPublicRoute = publicRoutes.includes(pathname) || pathname.startsWith('/chat/')
-    const isAuthRoute = authRoutes.includes(pathname)
-
-    // Redirect unauthenticated users to login
-    if (!supabaseUser && !isPublicRoute) {
-      router.push('/login')
-      return
-    }
-
-    // Redirect authenticated users away from auth pages
-    if (supabaseUser && isAuthRoute) {
+    // Only redirect authenticated users away from auth pages
+    if (supabaseUser && authRoutes.includes(pathname)) {
       router.push('/dashboard')
-      return
     }
   }, [supabaseUser, pathname, initializing, router])
 
