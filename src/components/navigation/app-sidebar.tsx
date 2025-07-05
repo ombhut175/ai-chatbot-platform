@@ -2,9 +2,10 @@
 
 import type * as React from "react"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import { Bot, Database, Home, Settings, User, ChevronUp, Sparkles, Users } from "lucide-react"
 import { AppRoute } from "@/helpers/string_const/routes"
+import { createClient } from "@/lib/supabase/client"
 
 import {
   Sidebar,
@@ -24,22 +25,24 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { ThemeToggle } from "@/components/ui/theme-toggle"
 import { useAuthStore } from "@/lib/store"
 
-const getNavItems = (isOwner: boolean) => [
+const getNavItems = (isOwner: boolean, userRole: string | undefined) => [
   {
     title: "Dashboard",
     url: AppRoute.DASHBOARD,
     icon: Home,
   },
-  {
-    title: "Data Sources",
-    url: AppRoute.DASHBOARD_DATA,
-    icon: Database,
-  },
-  {
-    title: "Chatbots",
-    url: AppRoute.DASHBOARD_CHATBOTS,
-    icon: Bot,
-  },
+  ...(userRole !== "visitor" ? [
+    {
+      title: "Data Sources",
+      url: AppRoute.DASHBOARD_DATA,
+      icon: Database,
+    },
+    {
+      title: "Chatbots",
+      url: AppRoute.DASHBOARD_CHATBOTS,
+      icon: Bot,
+    },
+  ] : []),
   ...(isOwner ? [{
     title: "Users",
     url: AppRoute.DASHBOARD_USERS,
@@ -49,9 +52,16 @@ const getNavItems = (isOwner: boolean) => [
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname()
-  const { userProfile, logout, isOwner } = useAuthStore()
+  const { userProfile, isOwner } = useAuthStore()
+  const supabase = createClient()
+  const router = useRouter()
   
-  const navItems = getNavItems(isOwner())
+  const handleSignOut = async () => {
+    await supabase.auth.signOut()
+    router.push('/login')
+  }
+  
+  const navItems = getNavItems(isOwner(), userProfile?.role)
 
   return (
     <Sidebar collapsible="icon" className="border-r border-border/50 bg-card/50 backdrop-blur-xl" {...props}>
@@ -139,7 +149,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem
-                  onClick={logout}
+                  onClick={handleSignOut}
                   className="cursor-pointer transition-colors duration-200 hover:bg-destructive/10 hover:text-destructive"
                 >
                   <span className="mr-2 h-4 w-4">🚪</span>
