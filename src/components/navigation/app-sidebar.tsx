@@ -45,11 +45,6 @@ const getNavItems = (isOwner: boolean) => [
     url: AppRoute.DASHBOARD_USERS,
     icon: Users,
   }] : []),
-  {
-    title: "Settings",
-    url: AppRoute.DASHBOARD_SETTINGS,
-    icon: Settings,
-  },
 ]
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
@@ -141,12 +136,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   <Link href="/dashboard/profile" className="flex items-center w-full">
                     <User className="mr-2 h-4 w-4" />
                     Profile
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem className="cursor-pointer transition-colors duration-200 hover:bg-primary/10">
-                  <Link href="/dashboard/settings" className="flex items-center w-full">
-                    <Settings className="mr-2 h-4 w-4" />
-                    Settings
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem

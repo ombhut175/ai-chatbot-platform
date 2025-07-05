@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Copy, RefreshCw, Eye } from "lucide-react"
+import { Copy, RefreshCw, Eye, ExternalLink } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -28,25 +28,26 @@ export default function Integration() {
   const generateWidgetCode = () => {
     if (!selectedChatbot) return ""
 
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || window.location.origin
+
     return `<!-- AI Chatbot Widget -->
-<script>
-  (function() {
-    var chatbot = document.createElement('script');
-    chatbot.src = 'https://cdn.yourplatform.com/widget.js';
-    chatbot.setAttribute('data-chatbot-id', '${selectedChatbot}');
-    chatbot.setAttribute('data-position', '${widgetSettings.position}');
-    chatbot.setAttribute('data-size', '${widgetSettings.size}');
-    chatbot.setAttribute('data-theme', '${widgetSettings.theme}');
-    document.head.appendChild(chatbot);
-  })();
+<script 
+  src="${appUrl}/widget.js" 
+  data-chatbot-id="${selectedChatbot}"
+  data-position="${widgetSettings.position}"
+  data-size="${widgetSettings.size}"
+  data-theme="${widgetSettings.theme}"
+  defer>
 </script>`
   }
 
   const generateIframeCode = () => {
     if (!selectedChatbot) return ""
 
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || window.location.origin
+
     return `<iframe
-  src="https://chat.yourplatform.com/embed/${selectedChatbot}"
+  src="${appUrl}/chat?chatbotId=${selectedChatbot}"
   width="400"
   height="600"
   frameborder="0"
@@ -176,9 +177,12 @@ export default function Integration() {
                       </Select>
                     </div>
 
-                    <Button className="w-full">
-                      <Eye className="mr-2 h-4 w-4" />
-                      Preview Widget
+                    <Button 
+                      className="w-full" 
+                      onClick={() => window.open('/widget-test.html', '_blank')}
+                    >
+                      <ExternalLink className="mr-2 h-4 w-4" />
+                      Test Widget
                     </Button>
                   </CardContent>
                 </Card>
