@@ -14,7 +14,6 @@ import { Badge } from "@/components/ui/badge"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
 import { useToast } from "@/hooks/use-toast"
 import { Plus, UserMinus, Edit, Mail, Users, Shield, User, Crown } from "lucide-react"
-import { formatDistanceToNow } from "date-fns"
 
 export function UsersPage() {
   const { userProfile, isOwner } = useAuthStore()
@@ -317,7 +316,6 @@ export function UsersPage() {
                 <TableRow>
                   <TableHead>User</TableHead>
                   <TableHead>Role</TableHead>
-                  <TableHead>Joined</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -340,9 +338,6 @@ export function UsersPage() {
                     </TableCell>
                     <TableCell>
                       {getRoleBadge(user.role)}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {formatDistanceToNow(new Date(user.created_at), { addSuffix: true })}
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">

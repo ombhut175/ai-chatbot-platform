@@ -126,9 +126,6 @@ export default function LoginForm() {
           </div>
         </form>
       </AnimatedCard>
-      <div className="mt-6 p-4 bg-muted/50 rounded-lg backdrop-blur-sm">
-        <p className="text-xs text-muted-foreground text-center">Demo: Use any email and password to continue</p>
-      </div>
     </>
   )
 }
