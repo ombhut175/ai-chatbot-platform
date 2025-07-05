@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
-import { Copy, RefreshCw, Eye, ArrowLeft, Loader2 } from "lucide-react"
+import { Copy, RefreshCw, Eye, ArrowLeft, Loader2, ExternalLink, X } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -15,6 +15,13 @@ import { useToast } from "@/hooks/use-toast"
 import { useChatbot } from "@/hooks/use-chatbots"
 import { AnimatedCard } from "@/components/ui/animated-card"
 import Link from "next/link"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 
 export default function ChatbotIntegrationsPage() {
   const params = useParams()
@@ -31,6 +38,7 @@ export default function ChatbotIntegrationsPage() {
     theme: "light",
   })
   const [apiKey] = useState("sk-1234567890abcdef1234567890abcdef")
+  const [showIframePreview, setShowIframePreview] = useState(false)
 
   const generateWidgetCode = () => {
     if (!chatbotId) return ""
@@ -52,8 +60,10 @@ export default function ChatbotIntegrationsPage() {
   const generateIframeCode = () => {
     if (!chatbotId) return ""
 
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || window.location.origin
+    
     return `<iframe
-  src="https://chat.yourplatform.com/embed/${chatbotId}"
+  src="${appUrl}/chat?chatbotId=${chatbotId}"
   width="400"
   height="600"
   frameborder="0"
@@ -261,14 +271,35 @@ export default function ChatbotIntegrationsPage() {
             <AnimatedCard>
               <CardHeader>
                 <CardTitle>iFrame Embed</CardTitle>
-                <CardDescription>Embed the chatbot directly in your webpage</CardDescription>
+                <CardDescription>
+                  Embed the chatbot directly in your webpage. The chatbot will be accessible from any domain.
+                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Generated HTML Snippet</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Copy and paste this code into your HTML where you want the chatbot to appear.
+                  </p>
+                </div>
                 <Textarea value={generateIframeCode()} readOnly rows={8} className="font-mono text-sm" />
-                <Button onClick={() => copyToClipboard(generateIframeCode(), "iFrame")} className="w-full">
-                  <Copy className="mr-2 h-4 w-4" />
-                  Copy iFrame Code
-                </Button>
+                <div className="flex gap-2">
+                  <Button onClick={() => copyToClipboard(generateIframeCode(), "iFrame")} className="flex-1">
+                    <Copy className="mr-2 h-4 w-4" />
+                    Copy iFrame Code
+                  </Button>
+                  <Button variant="outline" onClick={() => setShowIframePreview(true)}>
+                    <Eye className="mr-2 h-4 w-4" />
+                    Preview
+                  </Button>
+                </div>
+                <div className="p-3 bg-muted rounded-lg">
+                  <p className="text-sm font-medium mb-1">Note:</p>
+                  <p className="text-sm text-muted-foreground">
+                    This iframe will work on any website. Make sure your chatbot is set to "public" 
+                    if you want it to be accessible without authentication.
+                  </p>
+                </div>
               </CardContent>
             </AnimatedCard>
           </TabsContent>
@@ -354,6 +385,60 @@ export default function ChatbotIntegrationsPage() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* iFrame Preview Dialog */}
+      <Dialog open={showIframePreview} onOpenChange={setShowIframePreview}>
+        <DialogContent className="max-w-4xl h-[80vh]">
+          <DialogHeader>
+            <DialogTitle>iFrame Preview</DialogTitle>
+            <DialogDescription>
+              This is how your chatbot will appear when embedded in another website.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex-1 border rounded-lg overflow-hidden bg-muted/50">
+            <div className="p-4 bg-muted border-b">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-medium">Example Website Preview</p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const appUrl = process.env.NEXT_PUBLIC_APP_URL || window.location.origin
+                    window.open(`${appUrl}/chat?chatbotId=${chatbotId}`, '_blank')
+                  }}
+                >
+                  <ExternalLink className="h-4 w-4 mr-2" />
+                  Open in New Tab
+                </Button>
+              </div>
+            </div>
+            <div className="p-8 h-full">
+              <div className="max-w-2xl mx-auto">
+                <h3 className="text-lg font-semibold mb-4">Your Website Content</h3>
+                <p className="text-muted-foreground mb-6">
+                  This is example content from your website. The chatbot iframe will appear below.
+                </p>
+                <div className="border-2 border-dashed border-muted-foreground/30 rounded-lg p-4 mb-6">
+                  <p className="text-sm text-muted-foreground text-center">
+                    The chatbot will be embedded here:
+                  </p>
+                </div>
+                {/* Actual iframe */}
+                <div className="flex justify-center">
+                  <iframe
+                    src={`${process.env.NEXT_PUBLIC_APP_URL || window.location.origin}/chat?chatbotId=${chatbotId}`}
+                    width="400"
+                    height="600"
+                    frameBorder="0"
+                    style={{ borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                    title="Chatbot Preview"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

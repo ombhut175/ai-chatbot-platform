@@ -88,9 +88,16 @@ export const useChatHistory = (sessionId: string | null, chatbotId: string | nul
       dedupingInterval: 5000, // Prevent duplicate requests within 5 seconds
       onSuccess: (data) => {
         if (data && data.length > 0) {
-          // Only set messages if we have actual history
-          setMessages(data)
-          setError(null)
+          // Validate that all messages belong to the current chatbot
+          const validMessages = data.filter(msg => 
+            !msg.chatbot_id || msg.chatbot_id === chatbotId
+          )
+          
+          // Only set messages if we have actual history for this chatbot
+          if (validMessages.length > 0) {
+            setMessages(validMessages)
+            setError(null)
+          }
         }
       },
       onError: (err) => {

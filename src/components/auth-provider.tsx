@@ -32,32 +32,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     hasInitialized.current = true
     
     const initializeAuth = async () => {
+      console.log('[AuthProvider] Starting initialization...')
       setInitializing(true)
       
       try {
+        console.log('[AuthProvider] Creating Supabase client...')
         // Get initial session
         const { data: { session }, error } = await supabase.auth.getSession()
+        console.log('[AuthProvider] Session result:', { session: !!session, error: !!error })
         
         if (error) {
-          console.error('Auth session error:', error)
+          console.error('[AuthProvider] Auth session error:', error)
           setError(error.message)
           setInitializing(false)
           return
         }
 
         if (session?.user) {
+          console.log('[AuthProvider] User found, setting user...')
           setSupabaseUser(session.user)
           
           // Fetch user profile with company data
+          console.log('[AuthProvider] Fetching user profile...')
           const profile = await userService.getCurrentUserProfile()
           if (profile) {
+            console.log('[AuthProvider] Profile fetched successfully')
             setUserProfile(profile)
           }
+        } else {
+          console.log('[AuthProvider] No session found')
         }
       } catch (error) {
-        console.error('Auth initialization error:', error)
+        console.error('[AuthProvider] Auth initialization error:', error)
         setError('Failed to initialize authentication')
       } finally {
+        console.log('[AuthProvider] Initialization complete')
         setInitializing(false)
       }
     }
@@ -88,7 +97,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => {
       subscription.unsubscribe()
     }
-  }, [])
+  }, [setUserProfile, setSupabaseUser, setInitializing, setError, router])
 
   // Handle redirects for authenticated users only
   // The middleware handles unauthenticated user redirects

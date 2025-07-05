@@ -7,7 +7,8 @@ export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  console.log('🤖 Get chatbot details API called:', params.id)
+  const { id } = await params;
+  console.log('🤖 Get chatbot details API called:', id)
   
   try {
     // First, try to get the chatbot with public client to check its type
@@ -17,7 +18,7 @@ export async function GET(
     const { data: chatbotInfo, error: infoError } = await publicSupabase
       .from(TableName.CHATBOTS)
       .select('id, type, company_id')
-      .eq('id', params.id)
+      .eq('id', id)
       .eq('is_active', true)
       .single()
 
@@ -40,7 +41,7 @@ export async function GET(
       const { data: chatbot, error } = await publicSupabase
         .from(TableName.CHATBOTS)
         .select('id, name, description, welcome_message, theme, type')
-        .eq('id', params.id)
+        .eq('id', id)
         .single()
 
       if (error) {
@@ -123,7 +124,7 @@ export async function GET(
       const { data: chatbot, error } = await authSupabase
         .from(TableName.CHATBOTS)
         .select('id, name, description, welcome_message, theme, type, company_id')
-        .eq('id', params.id)
+        .eq('id', id)
         .single()
 
       if (error) {

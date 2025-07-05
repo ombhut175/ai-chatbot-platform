@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chatbot iFrame Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .content {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .chatbot-container {
+            display: flex;
+            justify-content: center;
+            padding: 20px;
+        }
+        .instructions {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        code {
+            background: #f5f5f5;
+            padding: 2px 5px;
+            border-radius: 3px;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>AI Chatbot iFrame Integration Test</h1>
+        
+        <div class="content">
+            <h2>Welcome to Our Website</h2>
+            <p>This is a demonstration of how the AI chatbot can be embedded into any website using an iframe.</p>
+            
+            <div class="instructions">
+                <h3>How to use:</h3>
+                <ol>
+                    <li>Replace <code>YOUR_CHATBOT_ID</code> in the iframe src with your actual chatbot ID</li>
+                    <li>Ensure your app is running (default: <code>http://localhost:3000</code>)</li>
+                    <li>The chatbot should appear below</li>
+                </ol>
+            </div>
+        </div>
+        
+        <div class="chatbot-container">
+            <!-- Replace YOUR_CHATBOT_ID with your actual chatbot ID -->
+            <iframe
+                src="http://localhost:3000/chat?chatbotId=bec86e43-9f62-44d3-a8f0-a8c40fe35fe5"
+                width="400"
+                height="600"
+                frameborder="0"
+                style="border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);"
+            ></iframe>
+        </div>
+        
+        <div class="content">
+            <h3>Integration Code</h3>
+            <p>Copy this code to embed the chatbot in your website:</p>
+            <pre style="background: #f5f5f5; padding: 15px; border-radius: 5px; overflow-x: auto;">
+&lt;iframe
+    src="http://localhost:3000/chat?chatbotId=YOUR_CHATBOT_ID"
+    width="400"
+    height="600"
+    frameborder="0"
+    style="border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);"
+&gt;&lt;/iframe&gt;
+        </div>
+    </div>
+</body>
+</html>

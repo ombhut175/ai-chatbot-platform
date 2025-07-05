@@ -90,6 +90,7 @@ export const usePublicChatStore = create<PublicChatState>()(
     }),
     
     resetChat: () => set((state) => {
+      // Clear all state immediately
       state.messages = []
       state.sessionId = null
       state.chatbot = null
