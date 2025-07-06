@@ -243,7 +243,7 @@ function UnifiedChatContent() {
     )
   }
 
-// Successfully loaded chatbot
+  // Successfully loaded chatbot
   if (chatbot) {
     if (chatbot.type === 'internal' && isAuthenticated) {
       return (
@@ -280,12 +280,12 @@ function UnifiedChatContent() {
             </div>
           </div>
           <div className="relative z-10">
-            <PublicChatPage />
+            <PublicChatPage preloadedChatbot={chatbot} />
           </div>
         </div>
       )
     }
-    return <PublicChatPage />
+    return <PublicChatPage preloadedChatbot={chatbot} />
   }
 
   // Fallback (should not reach here)
@@ -301,7 +301,7 @@ function UnifiedChatContent() {
 }
 
 // Main page component with Suspense boundary
-export default function page() {
+export default function UnifiedChatPage() {
   return (
     <Suspense fallback={<LoadingState />}>
       <UnifiedChatContent />

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Plus, Bot, Settings, Play, Pause, Eye, Trash2, AlertCircle, Plug } from "lucide-react"
+import { Plus, Bot, Settings, Play, Pause, Eye, Trash2, AlertCircle, Plug, RefreshCw } from "lucide-react"
 import Link from "next/link"
 
 import { Button } from "@/components/ui/button"
@@ -34,6 +34,7 @@ export default function ChatbotsPage() {
   const { deleteChatbot: deleteChatbotApi } = useDeleteChatbot()
   const { toggleStatus } = useToggleChatbotStatus()
   
+  const [togglingChatbotId, setTogglingChatbotId] = useState<string | null>(null)
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [isCreating, setIsCreating] = useState(false)
   const [newChatbot, setNewChatbot] = useState({
@@ -81,7 +82,12 @@ export default function ChatbotsPage() {
   }
 
   const toggleChatbotStatus = async (id: string, currentStatus: boolean) => {
-    await toggleStatus(id, currentStatus)
+    setTogglingChatbotId(id)
+    try {
+      await toggleStatus(id, currentStatus)
+    } finally {
+      setTogglingChatbotId(null)
+    }
   }
 
   const handleDeleteChatbot = async (id: string) => {
@@ -109,13 +115,23 @@ export default function ChatbotsPage() {
           <h2 className="text-3xl font-bold tracking-tight">Chatbots</h2>
           <p className="text-muted-foreground">Create and manage your AI chatbots</p>
         </div>
-        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              Create Chatbot
-            </Button>
-          </DialogTrigger>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={() => mutate()}
+            disabled={isLoading}
+            className="hover:bg-primary/10 hover:text-primary transition-all duration-300"
+          >
+            <RefreshCw className={`mr-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="mr-2 h-4 w-4" />
+                Create Chatbot
+              </Button>
+            </DialogTrigger>
           <DialogContent className="sm:max-w-[600px]">
             <DialogHeader>
               <DialogTitle>Create New Chatbot</DialogTitle>
@@ -235,7 +251,8 @@ export default function ChatbotsPage() {
               </Button>
             </DialogFooter>
           </DialogContent>
-        </Dialog>
+          </Dialog>
+        </div>
       </div>
 
       {isLoading ? (
@@ -359,9 +376,16 @@ export default function ChatbotsPage() {
                       variant="outline"
                       size="sm"
                       onClick={() => toggleChatbotStatus(chatbot.id, chatbot.is_active)}
+                      disabled={togglingChatbotId === chatbot.id}
                       className="hover:bg-primary/10 hover:text-primary transition-all duration-300 hover:scale-105"
                     >
-                      {chatbot.is_active ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+                      {togglingChatbotId === chatbot.id ? (
+                        <RefreshCw className="h-4 w-4 animate-spin" />
+                      ) : chatbot.is_active ? (
+                        <Pause className="h-4 w-4" />
+                      ) : (
+                        <Play className="h-4 w-4" />
+                      )}
                     </Button>
                     <Link href={`/chat?chatbotId=${chatbot.id}`}>
                       <Button
@@ -383,13 +407,6 @@ export default function ChatbotsPage() {
                         <Plug className="h-4 w-4" />
                       </Button>
                     </Link>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="hover:bg-blue-500/10 hover:text-blue-600 transition-all duration-300 hover:scale-105 bg-transparent"
-                    >
-                      <Settings className="h-4 w-4" />
-                    </Button>
                   </div>
                   <Button
                     variant="outline"

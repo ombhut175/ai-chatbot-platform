@@ -28,7 +28,7 @@ export default function RootLayout({
             {children}
           </AuthProvider>
           <Toaster />
-          {/* <StagewiseWrapper /> */}
+          <StagewiseWrapper />
         </ThemeProvider>
       </body>
     </html>

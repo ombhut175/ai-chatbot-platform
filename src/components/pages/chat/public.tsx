@@ -13,7 +13,11 @@ import { useChatHistory, useSendMessage } from '@/hooks/usePublicChat'
 import { cn } from '@/lib/utils'
 import { motion, AnimatePresence } from 'framer-motion'
 
-export default function PublicChatPage() {
+interface PublicChatPageProps {
+  preloadedChatbot?: any
+}
+
+export default function PublicChatPage({ preloadedChatbot }: PublicChatPageProps = {}) {
   const searchParams = useSearchParams()
   const chatbotId = searchParams?.get('chatbotId')
   
@@ -87,11 +91,25 @@ export default function PublicChatPage() {
     }
   }, [chatbotId, resetChat])
 
+  // Use preloaded chatbot if available
+  useEffect(() => {
+    if (preloadedChatbot && preloadedChatbot.id === chatbotId && !chatbot) {
+      setChatbot(preloadedChatbot)
+      chatbotLoadedRef.current = true
+      setIsLoading(false)
+    }
+  }, [preloadedChatbot, chatbotId, chatbot, setChatbot, setIsLoading])
+
   // Load chatbot details using fetch (public endpoint doesn't require auth)
   useEffect(() => {
     const loadChatbot = async () => {
       if (!chatbotId) {
         setError('No chatbot ID provided')
+        return
+      }
+
+      // Skip if we have a preloaded chatbot
+      if (preloadedChatbot && preloadedChatbot.id === chatbotId) {
         return
       }
 
@@ -120,7 +138,7 @@ export default function PublicChatPage() {
     }
 
     loadChatbot()
-  }, [chatbotId, chatbot?.id, setError, setIsLoading, setChatbot])
+  }, [chatbotId, chatbot?.id, preloadedChatbot, setError, setIsLoading, setChatbot])
 
   // Add welcome message only when appropriate
   useEffect(() => {
