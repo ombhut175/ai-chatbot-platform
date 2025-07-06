@@ -31,7 +31,8 @@ export default function LoginForm() {
     const result = await signInWithEmail(email, password)
     
     if (result.success) {
-      router.push(redirectTo)
+      // Use replace to avoid back button issues
+      router.replace(redirectTo)
     }
     // Error handling is done by the useAuth hook
   }

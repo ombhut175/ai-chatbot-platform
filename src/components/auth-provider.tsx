@@ -36,6 +36,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.log('[AuthProvider] Starting initialization...')
       setInitializing(true)
       
+      // Set a timeout to prevent infinite loading
+      const timeoutId = setTimeout(() => {
+        console.log('[AuthProvider] Initialization timeout - forcing complete')
+        setInitializing(false)
+      }, 5000) // 5 second timeout
+      
       try {
         console.log('[AuthProvider] Creating Supabase client...')
         // Get initial session
@@ -45,6 +51,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (error) {
           console.error('[AuthProvider] Auth session error:', error)
           setError(error.message)
+          clearTimeout(timeoutId)
           setInitializing(false)
           return
         }
@@ -55,10 +62,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           
           // Fetch user profile with company data
           console.log('[AuthProvider] Fetching user profile...')
-          const profile = await userService.getCurrentUserProfile()
-          if (profile) {
-            console.log('[AuthProvider] Profile fetched successfully')
-            setUserProfile(profile)
+          try {
+            const profile = await userService.getCurrentUserProfile()
+            if (profile) {
+              console.log('[AuthProvider] Profile fetched successfully')
+              setUserProfile(profile)
+            }
+          } catch (profileError) {
+            console.error('[AuthProvider] Failed to fetch profile:', profileError)
+            // Don't fail initialization if profile fetch fails
           }
         } else {
           console.log('[AuthProvider] No session found')
@@ -67,6 +79,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.error('[AuthProvider] Auth initialization error:', error)
         setError('Failed to initialize authentication')
       } finally {
+        clearTimeout(timeoutId)
         console.log('[AuthProvider] Initialization complete')
         setInitializing(false)
       }
@@ -76,23 +89,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('[AuthProvider] Auth state change:', event)
       setSupabaseUser(session?.user ?? null)
 
       if (event === 'SIGNED_IN' && session?.user) {
+        console.log('[AuthProvider] User signed in, fetching profile...')
         // Fetch user profile when signed in
         const profile = await userService.getCurrentUserProfile()
         if (profile) {
+          console.log('[AuthProvider] Profile fetched after sign in')
           setUserProfile(profile)
         }
-        } else if (event === 'SIGNED_OUT') {
-          setUserProfile(null)
-          // Get current pathname inside the callback to avoid stale closure
-          const currentPath = window.location.pathname
-          // Only redirect if not already on auth pages
-          if (!authRoutes.includes(currentPath)) {
-            window.location.href = '/login'
-          }
+        // Handle redirect for newly signed in users
+        const currentPath = window.location.pathname
+        if (authRoutes.includes(currentPath)) {
+          console.log('[AuthProvider] Redirecting from auth page to dashboard')
+          window.location.href = '/dashboard'
         }
+      } else if (event === 'SIGNED_OUT') {
+        setUserProfile(null)
+        // Get current pathname inside the callback to avoid stale closure
+        const currentPath = window.location.pathname
+        // Only redirect if not already on auth pages
+        if (!authRoutes.includes(currentPath)) {
+          window.location.href = '/login'
+        }
+      }
     })
 
     return () => {
@@ -106,8 +128,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (initializing) return
 
     // Only redirect authenticated users away from auth pages
+    // Use replace instead of push to avoid history issues
     if (supabaseUser && authRoutes.includes(pathname)) {
-      router.push('/dashboard')
+      router.replace('/dashboard')
     }
   }, [supabaseUser, pathname, initializing, router])
 

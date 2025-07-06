@@ -12,4 +12,5 @@ export enum AppRoute {
   DASHBOARD_PROFILE = '/dashboard/profile',
   DASHBOARD_SETTINGS = '/dashboard/settings',
   CHAT = '/chat',
+  CHAT_INTERNAL = '/chat/internal',
 }

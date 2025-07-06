@@ -40,6 +40,12 @@ export async function updateSession(request: NextRequest) {
   const protectedRoutes = [AppRoute.DASHBOARD]
   const internalChatRoutes = [AppRoute.CHAT_INTERNAL]
   
+  // Auth routes where authenticated users should be redirected away from
+  const authRoutes = [AppRoute.LOGIN, AppRoute.SIGNUP]
+  const isAuthRoute = authRoutes.some(route => 
+    request.nextUrl.pathname === route
+  )
+  
   // Check if the current path requires authentication
   const isProtectedRoute = protectedRoutes.some(route => 
     request.nextUrl.pathname.startsWith(route)
@@ -53,6 +59,13 @@ export async function updateSession(request: NextRequest) {
   const isInternalApiRoute = request.nextUrl.pathname.startsWith('/api/chatbots') && 
      !request.nextUrl.pathname.startsWith('/api/chatbots/public') &&
      !request.nextUrl.pathname.startsWith('/api/chatbots/details')
+
+  // Redirect authenticated users away from auth pages
+  if (user && isAuthRoute) {
+    const url = request.nextUrl.clone()
+    url.pathname = AppRoute.DASHBOARD
+    return NextResponse.redirect(url)
+  }
 
   // Only redirect to login if user is trying to access protected routes without authentication
   if (!user && (isProtectedRoute || isInternalChatRoute || isInternalApiRoute)) {
