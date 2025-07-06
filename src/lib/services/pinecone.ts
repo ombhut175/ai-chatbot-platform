@@ -223,11 +223,65 @@ export class PineconeService {
         }
       }
 
-      // Upload vectors to Pinecone
+      // Upload vectors to Pinecone in batches to avoid timeouts
       console.log(`🚀 Uploading ${vectors.length} vectors to Pinecone namespace: ${namespace}...`)
-      await index.namespace(namespace).upsert(vectors)
-
-      console.log(`🎉 Successfully uploaded ${vectors.length} vectors to Pinecone`)
+      
+      // Batch size for Pinecone uploads (50 is conservative to avoid timeouts)
+      const BATCH_SIZE = 50;
+      const batches = [];
+      
+      for (let i = 0; i < vectors.length; i += BATCH_SIZE) {
+        batches.push(vectors.slice(i, i + BATCH_SIZE));
+      }
+      
+      console.log(`📦 Split into ${batches.length} batches of up to ${BATCH_SIZE} vectors each`);
+      
+      // Upload each batch with retry logic
+      let successfulUploads = 0;
+      
+      for (let i = 0; i < batches.length; i++) {
+        const batch = batches[i];
+        console.log(`📤 Uploading batch ${i + 1}/${batches.length} (${batch.length} vectors)...`);
+        
+        // Retry logic for batch upload
+        let retryCount = 0;
+        const maxRetries = 3;
+        let uploadSuccess = false;
+        
+        while (retryCount < maxRetries && !uploadSuccess) {
+          try {
+            await index.namespace(namespace).upsert(batch);
+            console.log(`✅ Batch ${i + 1} uploaded successfully`);
+            successfulUploads += batch.length;
+            uploadSuccess = true;
+            
+            // Small delay between batches to avoid rate limiting
+            if (i < batches.length - 1) {
+              await new Promise(resolve => setTimeout(resolve, 200));
+            }
+          } catch (batchError) {
+            retryCount++;
+            const errorMessage = batchError instanceof Error ? batchError.message : String(batchError);
+            
+            // Check if error is retryable (timeout or rate limit)
+            if ((errorMessage.includes('timeout') || errorMessage.includes('504') || errorMessage.includes('429')) && retryCount < maxRetries) {
+              const delay = 1000 * Math.pow(2, retryCount - 1); // Exponential backoff: 1s, 2s, 4s
+              console.warn(`⚠️ Batch ${i + 1} failed (attempt ${retryCount}/${maxRetries}), retrying in ${delay}ms...`);
+              console.warn(`   Error: ${errorMessage}`);
+              await new Promise(resolve => setTimeout(resolve, delay));
+            } else {
+              console.error(`❌ Failed to upload batch ${i + 1} after ${retryCount} attempts:`, batchError);
+              throw new Error(`Failed to upload batch ${i + 1} of ${batches.length}: ${errorMessage}`);
+            }
+          }
+        }
+        
+        if (!uploadSuccess) {
+          throw new Error(`Failed to upload batch ${i + 1} after ${maxRetries} retries`);
+        }
+      }
+      
+      console.log(`🎉 Successfully uploaded ${successfulUploads} vectors to Pinecone`)
 
       return { 
         success: true, 

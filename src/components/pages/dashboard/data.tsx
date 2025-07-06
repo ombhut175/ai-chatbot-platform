@@ -49,13 +49,14 @@ export default function DataSourcesClientPage() {
   const { scrapeUrl } = useUrlScraping()
   const { createQaPair } = useQaPairs()
   const { toast } = useToast()
+  const [isRefreshing, setIsRefreshing] = useState(false)
   
   // Force refresh data after uploads
   useEffect(() => {
     if (!isUploading && dataSources) {
       mutate()
     }
-  }, [isUploading])
+  }, [isUploading, dataSources, mutate])
 
   const handleFiles = async (files: FileList) => {
     const fileArray = Array.from(files)
@@ -279,14 +280,33 @@ export default function DataSourcesClientPage() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => mutate()}
-              disabled={isLoading}
+              onClick={async () => {
+                setIsRefreshing(true)
+                try {
+                  // Force refresh by passing undefined to clear cache
+                  await mutate(undefined, { revalidate: true })
+                  toast({
+                    title: "Refreshed",
+                    description: "Data sources have been refreshed successfully.",
+                  })
+                } catch (error) {
+                  console.error('Refresh error:', error)
+                  toast({
+                    title: "Refresh failed",
+                    description: "Failed to refresh data sources. Please try again.",
+                    variant: "destructive",
+                  })
+                } finally {
+                  setIsRefreshing(false)
+                }
+              }}
+              disabled={isLoading || isRefreshing}
               className="ml-4 flex items-center"
-              title="Refresh"
+              title="Refresh data sources"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
-                className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`}
+                className={`h-4 w-4 mr-2 ${isLoading || isRefreshing ? 'animate-spin' : ''}`}
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -298,7 +318,7 @@ export default function DataSourcesClientPage() {
                   d="M4 4v5h.582m15.356-2A9 9 0 11 6.343 6.343M20 20v-5h-.581"
                 />
               </svg>
-              Refresh
+              {isRefreshing ? "Refreshing..." : "Refresh"}
             </Button>
           </div>
         </CardHeader>

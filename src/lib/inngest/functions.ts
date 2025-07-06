@@ -41,6 +41,9 @@ export const processFileFunction = inngest.createFunction(
         buffer: fileBuffer,
         size: fileBuffer.length
       }
+    }, {
+      // 2 minute timeout for file download
+      timeout: '2m'
     })
 
     // Step 2: Extract text content based on file type
@@ -282,6 +285,9 @@ export const processFileFunction = inngest.createFunction(
       console.log(`📝 First 200 chars: ${textContent.substring(0, 200)}...`)
       
       return textContent
+    }, {
+      // 3 minute timeout for text extraction (PDF/DOCX can be slow)
+      timeout: '3m'
     })
 
     // Step 3: Process text into chunks and create embeddings
@@ -313,6 +319,10 @@ export const processFileFunction = inngest.createFunction(
         chunksCount: chunks.length,
         namespace
       }
+    }, {
+      // Increase timeout to 5 minutes for embedding creation and upload
+      // This prevents Inngest from timing out during large file processing
+      timeout: '5m'
     })
 
     // Step 4: Update database status

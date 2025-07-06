@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Upload, Save, Key, RefreshCw, Building, User, Mail, Lock } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -18,13 +18,13 @@ export default function SettingsPage() {
   const { toast } = useToast()
 
   const [companySettings, setCompanySettings] = useState({
-    name: userProfile?.company?.name || "",
-    logo: userProfile?.company?.logo || "",
+    name: "",
+    logo: "",
   })
 
   const [accountSettings, setAccountSettings] = useState({
-    name: userProfile?.name || "",
-    email: userProfile?.email || "",
+    name: "",
+    email: "",
     currentPassword: "",
     newPassword: "",
     confirmPassword: "",
@@ -35,6 +35,23 @@ export default function SettingsPage() {
     fallbackMessage: "I'm sorry, I don't understand. Could you please rephrase your question?",
     offlineMessage: "We're currently offline. Please leave a message and we'll get back to you.",
   })
+
+  useEffect(() => {
+    if (userProfile) {
+      setCompanySettings({
+        name: userProfile.company?.name || "",
+        logo: userProfile.company?.logo || "",
+      })
+      setAccountSettings(prev => ({
+        ...prev,
+        name: userProfile.name || "",
+        email: userProfile.email || "",
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: "",
+      }))
+    }
+  }, [userProfile])
 
   const [apiKeys] = useState([
     { id: "1", name: "Production API Key", key: "sk-prod-1234567890abcdef", created: "2024-01-15" },
@@ -203,7 +220,6 @@ export default function SettingsPage() {
                   />
                 </div>
               </div>
-
               <div className="space-y-2">
                 <Label htmlFor="new-password">New Password</Label>
                 <div className="relative">
@@ -217,7 +233,6 @@ export default function SettingsPage() {
                   />
                 </div>
               </div>
-
               <div className="space-y-2">
                 <Label htmlFor="confirm-password">Confirm New Password</Label>
                 <div className="relative">
@@ -231,7 +246,6 @@ export default function SettingsPage() {
                   />
                 </div>
               </div>
-
               <Button onClick={handleAccountUpdate}>
                 <Save className="mr-2 h-4 w-4" />
                 Update Password
@@ -243,43 +257,37 @@ export default function SettingsPage() {
         <TabsContent value="chatbots" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Default Chatbot Settings</CardTitle>
-              <CardDescription>Set default messages and responses for new chatbots</CardDescription>
+              <CardTitle>Chatbot Defaults</CardTitle>
+              <CardDescription>Set the default messages for your chatbots</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="welcome-message">Default Welcome Message</Label>
+                <Label htmlFor="welcome-message">Welcome Message</Label>
                 <Textarea
                   id="welcome-message"
                   value={chatbotDefaults.welcomeMessage}
                   onChange={(e) => setChatbotDefaults((prev) => ({ ...prev, welcomeMessage: e.target.value }))}
-                  rows={3}
                 />
               </div>
-
               <div className="space-y-2">
-                <Label htmlFor="fallback-message">Default Fallback Message</Label>
+                <Label htmlFor="fallback-message">Fallback Message</Label>
                 <Textarea
                   id="fallback-message"
                   value={chatbotDefaults.fallbackMessage}
                   onChange={(e) => setChatbotDefaults((prev) => ({ ...prev, fallbackMessage: e.target.value }))}
-                  rows={3}
                 />
               </div>
-
               <div className="space-y-2">
-                <Label htmlFor="offline-message">Default Offline Message</Label>
+                <Label htmlFor="offline-message">Offline Message</Label>
                 <Textarea
                   id="offline-message"
                   value={chatbotDefaults.offlineMessage}
                   onChange={(e) => setChatbotDefaults((prev) => ({ ...prev, offlineMessage: e.target.value }))}
-                  rows={3}
                 />
               </div>
-
               <Button onClick={handleChatbotDefaultsUpdate}>
                 <Save className="mr-2 h-4 w-4" />
-                Save Default Settings
+                Save Chatbot Defaults
               </Button>
             </CardContent>
           </Card>
@@ -288,34 +296,35 @@ export default function SettingsPage() {
         <TabsContent value="api" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>API Key Management</CardTitle>
-              <CardDescription>Manage your API keys for integrations and external access</CardDescription>
+              <CardTitle>API Keys</CardTitle>
+              <CardDescription>Manage your API keys for integrations</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {apiKeys.map((apiKey) => (
-                <div key={apiKey.id} className="flex items-center justify-between p-4 border rounded-lg">
-                  <div className="space-y-1">
-                    <p className="font-medium">{apiKey.name}</p>
-                    <p className="text-sm text-muted-foreground">
-                      Created on {new Date(apiKey.created).toLocaleDateString()}
-                    </p>
-                    <code className="text-xs bg-gray-100 px-2 py-1 rounded">{apiKey.key.substring(0, 20)}...</code>
-                  </div>
-                  <div className="flex space-x-2">
-                    <Button variant="outline" size="sm" onClick={() => copyApiKey(apiKey.key)}>
-                      <Key className="h-4 w-4" />
-                    </Button>
-                    <Button variant="outline" size="sm" onClick={() => regenerateApiKey(apiKey.id)}>
-                      <RefreshCw className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              ))}
-
-              <Button variant="outline" className="w-full bg-transparent">
-                <Key className="mr-2 h-4 w-4" />
-                Generate New API Key
-              </Button>
+              <div className="flex justify-end">
+                <Button>
+                  <Key className="mr-2 h-4 w-4" />
+                  Generate New API Key
+                </Button>
+              </div>
+              <ul className="space-y-4">
+                {apiKeys.map((key) => (
+                  <li key={key.id} className="p-4 border rounded-md flex justify-between items-center">
+                    <div>
+                      <p className="font-semibold">{key.name}</p>
+                      <p className="text-sm text-gray-500 font-mono">{key.key}</p>
+                      <p className="text-xs text-gray-400 mt-1">Created: {key.created}</p>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Button variant="ghost" size="icon" onClick={() => copyApiKey(key.key)}>
+                        <Upload className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={() => regenerateApiKey(key.id)}>
+                        <RefreshCw className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
             </CardContent>
           </Card>
         </TabsContent>
