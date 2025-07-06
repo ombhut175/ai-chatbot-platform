@@ -98,7 +98,7 @@ export default function PublicChatPage({ preloadedChatbot }: PublicChatPageProps
       chatbotLoadedRef.current = true
       setIsLoading(false)
     }
-  }, [preloadedChatbot?.id, chatbotId, chatbot, setChatbot, setIsLoading])
+  }, [preloadedChatbot, chatbotId, chatbot, setChatbot, setIsLoading])
 
   // Load chatbot details using fetch (public endpoint doesn't require auth)
   useEffect(() => {
@@ -138,7 +138,7 @@ export default function PublicChatPage({ preloadedChatbot }: PublicChatPageProps
     }
 
     loadChatbot()
-  }, [chatbotId, chatbot?.id, setError, setIsLoading, setChatbot])
+  }, [chatbotId, chatbot?.id, preloadedChatbot, setError, setIsLoading, setChatbot])
 
   // Add welcome message only when appropriate
   useEffect(() => {

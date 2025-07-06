@@ -98,11 +98,9 @@ export function useFileUpload() {
     }
   }, [userProfile?.company_id, setUploading, addDataSource])
 
-  const isUploading = useAppStore(state => state.uploading)
-  
   return {
     uploadFile,
-    isUploading,
+    isUploading: useAppStore(state => state.uploading),
   }
 }
 
