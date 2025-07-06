@@ -51,7 +51,9 @@ export function useAuth() {
       })
 
       // Only redirect on explicit sign out, and avoid redirecting if already on auth pages
-      if (event === 'SIGNED_OUT' && !pathname.startsWith('/login') && !pathname.startsWith('/signup')) {
+      // Use window.location.pathname to avoid stale closure
+      const currentPath = window.location.pathname
+      if (event === 'SIGNED_OUT' && !currentPath.startsWith('/login') && !currentPath.startsWith('/signup')) {
         router.push('/login')
       }
     })

@@ -56,7 +56,7 @@ export default function DataSourcesClientPage() {
     if (!isUploading && dataSources) {
       mutate()
     }
-  }, [isUploading, dataSources, mutate])
+  }, [isUploading, mutate])
 
   const handleFiles = async (files: FileList) => {
     const fileArray = Array.from(files)
