@@ -49,6 +49,38 @@ export class UserService {
         .single()
 
       if (error) {
+        // If user doesn't exist in users table, create them
+        if (error.code === 'PGRST116') {
+          console.log('User profile not found, creating new profile...')
+          const { data: newProfile, error: createError } = await this.supabase
+            .from('users')
+            .insert({
+              id: user.id,
+              email: user.email!,
+              name: user.user_metadata?.name || null,
+              role: 'visitor',
+              company_id: null
+            })
+            .select(`
+              id,
+              email,
+              name,
+              role,
+              company_id,
+              created_at,
+              company:companies(*)
+            `)
+            .single()
+
+          if (createError) {
+            console.error('Error creating user profile:', createError)
+            return null
+          }
+
+          console.log('User profile created successfully')
+          return newProfile as UserProfile
+        }
+        
         console.error('Error fetching user profile:', error)
         return null
       }

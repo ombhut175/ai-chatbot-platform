@@ -27,7 +27,7 @@ import { useChatbots } from "@/hooks/use-chatbots"
 
 
 export default function Dashboard() {
-  const { userProfile } = useAuthStore()
+  const { userProfile, initializing, supabaseUser } = useAuthStore()
   const { stats, activities, isLoading, error } = useDashboardData()
   const { chatbots } = useChatbots()
 
@@ -136,7 +136,7 @@ export default function Dashboard() {
   }
 
   // Show loading state
-  if (isLoading) {
+  if (isLoading || initializing || (supabaseUser && !userProfile)) {
     return (
       <div className="flex-1 space-y-8 p-4 md:p-8 pt-6 bg-gradient-to-br from-background via-background to-primary/5">
         <div className="flex items-center justify-center min-h-[400px]">

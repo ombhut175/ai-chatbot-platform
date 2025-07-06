@@ -61,10 +61,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     router.push('/login')
   }
   
-  const navItems = getNavItems(isOwner(), userProfile?.role)
-  
   // Show loading state while profile is being fetched
   const isLoading = initializing || (supabaseUser && !userProfile)
+  
+  const navItems = getNavItems(isOwner(), userProfile?.role)
 
   return (
     <Sidebar collapsible="icon" className="border-r border-border/50 bg-card/50 backdrop-blur-xl" {...props}>
@@ -86,7 +86,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   </span>
                   <span className="truncate text-xs text-muted-foreground">
                     {isLoading ? (
-                      <span className="inline-block h-3 w-16 animate-pulse bg-muted rounded"></span>
+                      "Loading..."
                     ) : (
                       "Free Plan"
                     )}
@@ -155,7 +155,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     </span>
                     <span className="truncate text-xs text-muted-foreground">
                       {isLoading ? (
-                        <span className="inline-block h-3 w-32 animate-pulse bg-muted rounded"></span>
+                        "Loading..."
                       ) : (
                         userProfile?.email || supabaseUser?.email || "Loading..."
                       )}

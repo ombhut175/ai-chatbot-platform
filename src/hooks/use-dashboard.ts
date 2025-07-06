@@ -22,11 +22,14 @@ export interface DashboardActivity {
  * Hook to fetch dashboard statistics
  */
 export function useDashboardStats() {
-  const { userProfile } = useAuthStore()
+  const { userProfile, initializing, supabaseUser } = useAuthStore()
   const companyId = userProfile?.company_id
 
+  // Don't fetch if still initializing or if user exists but profile hasn't loaded yet
+  const shouldFetch = !initializing && companyId && userProfile
+
   const { data, error, isLoading, mutate } = useSWR(
-    companyId ? '/api/dashboard/stats' : null,
+    shouldFetch ? '/api/dashboard/stats' : null,
     async () => {
       console.log('📊 Fetching dashboard stats for company:', companyId)
       const result = await apiRequest.get<DashboardStats>('/api/dashboard/stats')
@@ -64,11 +67,14 @@ export function useDashboardStats() {
  * Hook to fetch dashboard recent activity
  */
 export function useDashboardActivity() {
-  const { userProfile } = useAuthStore()
+  const { userProfile, initializing, supabaseUser } = useAuthStore()
   const companyId = userProfile?.company_id
 
+  // Don't fetch if still initializing or if user exists but profile hasn't loaded yet
+  const shouldFetch = !initializing && companyId && userProfile
+
   const { data, error, isLoading, mutate } = useSWR(
-    companyId ? '/api/dashboard/activity' : null,
+    shouldFetch ? '/api/dashboard/activity' : null,
     async () => {
       console.log('📱 Fetching dashboard activity for company:', companyId)
       const result = await apiRequest.get<DashboardActivity[]>('/api/dashboard/activity')
@@ -106,13 +112,17 @@ export function useDashboardActivity() {
  * Combined hook for all dashboard data
  */
 export function useDashboardData() {
+  const { initializing, supabaseUser, userProfile } = useAuthStore()
   const stats = useDashboardStats()
   const activity = useDashboardActivity()
+
+  // Consider loading if auth is initializing or if we have a user but no profile yet
+  const isAuthLoading = initializing || (supabaseUser && !userProfile)
 
   return {
     stats: stats.stats,
     activities: activity.activities,
-    isLoading: stats.isLoading || activity.isLoading,
+    isLoading: isAuthLoading || stats.isLoading || activity.isLoading,
     error: stats.error || activity.error,
     mutate: () => {
       stats.mutate()

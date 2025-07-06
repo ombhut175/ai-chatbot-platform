@@ -66,18 +66,43 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           try {
             const profile = await userService.getCurrentUserProfile()
             if (profile) {
-              console.log('[AuthProvider] Profile fetched successfully')
+              console.log('[AuthProvider] Profile fetched successfully:', {
+                id: profile.id,
+                email: profile.email,
+                company_id: profile.company_id,
+                hasCompany: !!profile.company
+              })
               setUserProfile(profile)
             } else {
               // If profile is null, try to refetch after a short delay
               console.log('[AuthProvider] Profile not found, retrying...')
-              setTimeout(async () => {
-                const retryProfile = await userService.getCurrentUserProfile()
-                if (retryProfile) {
-                  console.log('[AuthProvider] Profile fetched on retry')
-                  setUserProfile(retryProfile)
+              // Retry up to 3 times with increasing delays
+              let retryCount = 0
+              const maxRetries = 3
+              const retryDelays = [500, 1000, 2000]
+              
+              const retryFetch = async () => {
+                if (retryCount >= maxRetries) {
+                  console.error('[AuthProvider] Max retries reached, profile still not found')
+                  return
                 }
-              }, 1000)
+                
+                const delay = retryDelays[retryCount] || 2000
+                retryCount++
+                
+                await new Promise(resolve => setTimeout(resolve, delay))
+                const retryProfile = await userService.getCurrentUserProfile()
+                
+                if (retryProfile) {
+                  console.log(`[AuthProvider] Profile fetched on retry #${retryCount}`)
+                  setUserProfile(retryProfile)
+                } else {
+                  console.log(`[AuthProvider] Profile not found on retry #${retryCount}`)
+                  retryFetch() // Try again
+                }
+              }
+              
+              retryFetch()
             }
           } catch (profileError) {
             console.error('[AuthProvider] Failed to fetch profile:', profileError)
@@ -111,18 +136,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Fetch profile asynchronously without blocking
         userService.getCurrentUserProfile().then(profile => {
           if (profile) {
-            console.log('[AuthProvider] Profile fetched after sign in')
+            console.log('[AuthProvider] Profile fetched after sign in:', {
+              id: profile.id,
+              email: profile.email,
+              company_id: profile.company_id,
+              hasCompany: !!profile.company
+            })
             setUserProfile(profile)
           } else {
-            // Retry profile fetch if null
-            console.log('[AuthProvider] Profile null after sign in, retrying...')
-            setTimeout(async () => {
-              const retryProfile = await userService.getCurrentUserProfile()
-              if (retryProfile) {
-                console.log('[AuthProvider] Profile fetched on retry after sign in')
-                setUserProfile(retryProfile)
+            // Retry profile fetch if null with better logic
+            console.log('[AuthProvider] Profile null after sign in, implementing retry strategy...')
+            let retryCount = 0
+            const maxRetries = 3
+            const retryDelays = [500, 1000, 2000]
+            
+            const retryFetch = async () => {
+              if (retryCount >= maxRetries) {
+                console.error('[AuthProvider] Max retries reached after sign in, profile still not found')
+                return
               }
-            }, 1500)
+              
+              const delay = retryDelays[retryCount] || 2000
+              retryCount++
+              
+              await new Promise(resolve => setTimeout(resolve, delay))
+              const retryProfile = await userService.getCurrentUserProfile()
+              
+              if (retryProfile) {
+                console.log(`[AuthProvider] Profile fetched on retry #${retryCount} after sign in`)
+                setUserProfile(retryProfile)
+              } else {
+                console.log(`[AuthProvider] Profile not found on retry #${retryCount} after sign in`)
+                retryFetch() // Try again
+              }
+            }
+            
+            retryFetch()
           }
         }).catch(err => {
           console.error('[AuthProvider] Error fetching profile after sign in:', err)
