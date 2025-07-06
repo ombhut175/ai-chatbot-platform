@@ -18,6 +18,7 @@ export default function LoginForm() {
   const [password, setPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
   const [rememberMe, setRememberMe] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
   
   const { signInWithEmail, loading, error } = useAuth()
   const router = useRouter()
@@ -28,13 +29,25 @@ export default function LoginForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    const result = await signInWithEmail(email, password)
+    // Prevent multiple submissions
+    if (isSubmitting || loading) return
     
-    if (result.success) {
-      // Use replace to avoid back button issues
-      router.replace(redirectTo)
+    setIsSubmitting(true)
+    
+    try {
+      const result = await signInWithEmail(email, password)
+      
+      if (result.success) {
+        // Use replace to avoid back button issues
+        // Don't reset isSubmitting to prevent multiple redirects
+        router.replace(redirectTo)
+      } else {
+        setIsSubmitting(false)
+      }
+    } catch (err) {
+      console.error('Login error:', err)
+      setIsSubmitting(false)
     }
-    // Error handling is done by the useAuth hook
   }
 
   return (
@@ -104,8 +117,8 @@ export default function LoginForm() {
               Forgot password?
             </Link>
           </div>
-          <GradientButton type="submit" className="w-full h-12" disabled={loading}>
-            {loading ? (
+          <GradientButton type="submit" className="w-full h-12" disabled={loading || isSubmitting}>
+            {(loading || isSubmitting) ? (
               <div className="flex items-center space-x-2">
                 <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                 <span>Signing in...</span>

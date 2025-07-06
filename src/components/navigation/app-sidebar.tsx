@@ -52,7 +52,7 @@ const getNavItems = (isOwner: boolean, userRole: string | undefined) => [
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname()
-  const { userProfile, isOwner } = useAuthStore()
+  const { userProfile, isOwner, supabaseUser, initializing } = useAuthStore()
   const supabase = createClient()
   const router = useRouter()
   
@@ -62,6 +62,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   }
   
   const navItems = getNavItems(isOwner(), userProfile?.role)
+  
+  // Show loading state while profile is being fetched
+  const isLoading = initializing || (supabaseUser && !userProfile)
 
   return (
     <Sidebar collapsible="icon" className="border-r border-border/50 bg-card/50 backdrop-blur-xl" {...props}>
@@ -75,9 +78,19 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 </div>
                 <div className="grid flex-1 text-left text-sm leading-tight">
                   <span className="truncate font-semibold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
-                    {userProfile?.company?.name || "Your Company"}
+                    {isLoading ? (
+                      <span className="inline-block h-4 w-24 animate-pulse bg-muted rounded"></span>
+                    ) : (
+                      userProfile?.company?.name || "Your Company"
+                    )}
                   </span>
-                  <span className="truncate text-xs text-muted-foreground">Free Plan</span>
+                  <span className="truncate text-xs text-muted-foreground">
+                    {isLoading ? (
+                      <span className="inline-block h-3 w-16 animate-pulse bg-muted rounded"></span>
+                    ) : (
+                      "Free Plan"
+                    )}
+                  </span>
                 </div>
               </Link>
             </SidebarMenuButton>
@@ -123,15 +136,30 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   size="lg"
                   className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground group transition-all duration-300 hover:bg-primary/10"
                 >
-                  <Avatar className="h-8 w-8 rounded-lg transition-all duration-300 group-hover:scale-110">
-                    <AvatarImage src="/placeholder.svg" alt={userProfile?.name || "User"} />
+                <Avatar className="h-8 w-8 rounded-lg transition-all duration-300 group-hover:scale-110">
+                    <AvatarImage 
+                      src="" 
+                      alt={userProfile?.name || supabaseUser?.email || "User"} 
+                    />
                     <AvatarFallback className="rounded-lg bg-gradient-to-br from-primary/20 to-secondary/20">
-                      {userProfile?.name?.charAt(0) || userProfile?.email?.charAt(0).toUpperCase() || "U"}
+                      {userProfile?.name?.charAt(0) || supabaseUser?.email?.charAt(0).toUpperCase() || "U"}
                     </AvatarFallback>
                   </Avatar>
                   <div className="grid flex-1 text-left text-sm leading-tight">
-                    <span className="truncate font-semibold">{userProfile?.name || "User"}</span>
-                    <span className="truncate text-xs text-muted-foreground">{userProfile?.email || "user@example.com"}</span>
+                    <span className="truncate font-semibold">
+                      {isLoading ? (
+                        <span className="inline-block h-4 w-20 animate-pulse bg-muted rounded"></span>
+                      ) : (
+                        userProfile?.name || supabaseUser?.email?.split('@')[0] || "User"
+                      )}
+                    </span>
+                    <span className="truncate text-xs text-muted-foreground">
+                      {isLoading ? (
+                        <span className="inline-block h-3 w-32 animate-pulse bg-muted rounded"></span>
+                      ) : (
+                        userProfile?.email || supabaseUser?.email || "Loading..."
+                      )}
+                    </span>
                   </div>
                   <ChevronUp className="ml-auto size-4 transition-transform duration-300 group-hover:scale-110" />
                 </SidebarMenuButton>

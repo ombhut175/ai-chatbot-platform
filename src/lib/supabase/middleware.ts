@@ -62,8 +62,12 @@ export async function updateSession(request: NextRequest) {
 
   // Redirect authenticated users away from auth pages
   if (user && isAuthRoute) {
+    console.log('[Middleware] Redirecting authenticated user from auth page to dashboard')
     const url = request.nextUrl.clone()
     url.pathname = AppRoute.DASHBOARD
+    // Clear any redirect params when redirecting authenticated users
+    url.searchParams.delete('redirect')
+    url.searchParams.delete('error')
     return NextResponse.redirect(url)
   }
 

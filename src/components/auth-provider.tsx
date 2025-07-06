@@ -26,6 +26,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const supabase = createClient()
   const hasInitialized = useRef(false)
   const supabaseRef = useRef(supabase)
+  const isRedirecting = useRef(false)
 
   // Initialize auth state
   useEffect(() => {
@@ -67,6 +68,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             if (profile) {
               console.log('[AuthProvider] Profile fetched successfully')
               setUserProfile(profile)
+            } else {
+              // If profile is null, try to refetch after a short delay
+              console.log('[AuthProvider] Profile not found, retrying...')
+              setTimeout(async () => {
+                const retryProfile = await userService.getCurrentUserProfile()
+                if (retryProfile) {
+                  console.log('[AuthProvider] Profile fetched on retry')
+                  setUserProfile(retryProfile)
+                }
+              }, 1000)
             }
           } catch (profileError) {
             console.error('[AuthProvider] Failed to fetch profile:', profileError)
@@ -90,21 +101,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log('[AuthProvider] Auth state change:', event)
+      
+      // Always update user state immediately
       setSupabaseUser(session?.user ?? null)
 
       if (event === 'SIGNED_IN' && session?.user) {
         console.log('[AuthProvider] User signed in, fetching profile...')
-        // Fetch user profile when signed in
-        const profile = await userService.getCurrentUserProfile()
-        if (profile) {
-          console.log('[AuthProvider] Profile fetched after sign in')
-          setUserProfile(profile)
-        }
+        
+        // Fetch profile asynchronously without blocking
+        userService.getCurrentUserProfile().then(profile => {
+          if (profile) {
+            console.log('[AuthProvider] Profile fetched after sign in')
+            setUserProfile(profile)
+          } else {
+            // Retry profile fetch if null
+            console.log('[AuthProvider] Profile null after sign in, retrying...')
+            setTimeout(async () => {
+              const retryProfile = await userService.getCurrentUserProfile()
+              if (retryProfile) {
+                console.log('[AuthProvider] Profile fetched on retry after sign in')
+                setUserProfile(retryProfile)
+              }
+            }, 1500)
+          }
+        }).catch(err => {
+          console.error('[AuthProvider] Error fetching profile after sign in:', err)
+        })
+        
         // Handle redirect for newly signed in users
         const currentPath = window.location.pathname
-        if (authRoutes.includes(currentPath)) {
+        if (authRoutes.includes(currentPath) && !isRedirecting.current) {
           console.log('[AuthProvider] Redirecting from auth page to dashboard')
-          window.location.href = '/dashboard'
+          isRedirecting.current = true
+          // Small delay to ensure state updates are processed
+          setTimeout(() => {
+            window.location.href = '/dashboard'
+          }, 100)
         }
       } else if (event === 'SIGNED_OUT') {
         setUserProfile(null)
@@ -129,13 +161,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // Only redirect authenticated users away from auth pages
     // Use replace instead of push to avoid history issues
-    if (supabaseUser && authRoutes.includes(pathname)) {
+    if (supabaseUser && authRoutes.includes(pathname) && !isRedirecting.current) {
+      console.log('[AuthProvider] Client-side redirect: authenticated user on auth page')
+      isRedirecting.current = true
       router.replace('/dashboard')
     }
   }, [supabaseUser, pathname, initializing, router])
 
   // Loading state - but don't show loading screen on auth pages
-  if (initializing && !authRoutes.includes(pathname)) {
+  if (initializing && !authRoutes.includes(pathname) && !publicRoutes.includes(pathname)) {
     return (
       <div className="min-h-screen flex flex-col">
         <div className="flex-1 flex items-center justify-center">

@@ -25,17 +25,23 @@ export function useAuth() {
   useEffect(() => {
     // Get initial session
     const getInitialSession = async () => {
-      const {
-        data: { session },
-        error,
-      } = await supabase.auth.getSession()
-      
-      if (error) {
-        setAuthState({ user: null, loading: false, error: error.message })
-      } else {
-        setAuthState({ user: session?.user ?? null, loading: false, error: null })
+      try {
+        const {
+          data: { session },
+          error,
+        } = await supabase.auth.getSession()
+        
+        if (error) {
+          setAuthState({ user: null, loading: false, error: error.message })
+        } else {
+          setAuthState({ user: session?.user ?? null, loading: false, error: null })
+        }
+      } catch (err) {
+        console.error('[useAuth] Error getting initial session:', err)
+        setAuthState({ user: null, loading: false, error: 'Failed to get session' })
+      } finally {
+        setIsInitializing(false)
       }
-      setIsInitializing(false)
     }
 
     getInitialSession()
@@ -59,7 +65,7 @@ export function useAuth() {
     return () => {
       subscription.unsubscribe()
     }
-  }, [supabase, router])
+  }, [supabase, router, pathname])
 
   const signOut = async () => {
     setAuthState(prev => ({ ...prev, loading: true }))

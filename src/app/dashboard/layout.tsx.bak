@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useEffect } from "react"
+
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/navigation/app-sidebar"
 import { Separator } from "@/components/ui/separator"
@@ -13,31 +13,12 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
-import { useAuthStore } from "@/lib/store"
-import { userService } from "@/lib/services/user"
 
 export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
-  const { supabaseUser, userProfile, setUserProfile } = useAuthStore()
-  
-  // Force profile refresh if we have a user but no profile
-  useEffect(() => {
-    if (supabaseUser && !userProfile) {
-      console.log('[DashboardLayout] User exists but no profile, attempting to fetch...')
-      userService.getCurrentUserProfile().then(profile => {
-        if (profile) {
-          console.log('[DashboardLayout] Profile fetched successfully')
-          setUserProfile(profile)
-        }
-      }).catch(err => {
-        console.error('[DashboardLayout] Error fetching profile:', err)
-      })
-    }
-  }, [supabaseUser, userProfile, setUserProfile])
-  
   return (
     <SidebarProvider>
       <AppSidebar />
